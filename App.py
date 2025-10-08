@@ -8,9 +8,10 @@ import re
 
 # ---------- CONFIG ----------
 COMPANY_NAME = "True Blue Analytics"
+TOOL_NAME = "Easy Hasher"
 LOGO_PATH = r"C:\Users\musta\Downloads\download.png"  # update if you move the file
 
-st.set_page_config(page_title=f"{COMPANY_NAME} • Batch Hasher", page_icon=None, layout="wide")
+st.set_page_config(page_title=f"{TOOL_NAME} • {COMPANY_NAME}", page_icon=None, layout="wide")
 
 # ================ THEME / STYLES (blue) ================
 st.markdown(
@@ -143,8 +144,8 @@ except Exception:
 st.markdown('</div></div>', unsafe_allow_html=True)
 
 # ================ APP TITLE =================
-st.title("Batch File Hasher")
-st.markdown('<div class="subtitle">Use <b>Standard</b> for one-screen hashing with safe phone normalization, or <b>Advanced</b> for batch workflows.</div>', unsafe_allow_html=True)
+st.title(TOOL_NAME)
+st.markdown('<div class="subtitle">Standard: minimal, one-column deduped hashes. Advanced: batch with flexible retention and defaults.</div>', unsafe_allow_html=True)
 
 # ---------------- Utilities ----------------
 def parse_renames(txt: str):
@@ -217,71 +218,57 @@ def looks_like_phone(series: pd.Series, colname: str) -> bool:
     return phone_like.mean() >= 0.6  # 60% heuristic
 
 # ======================= MAIN TABS =======================
-main_tab = st.tabs(["Standard", "Advanced"])  # <-- renamed per request
+main_tab = st.tabs(["Standard", "Advanced", "Combine"])
 
 # ======================= STANDARD TAB ======================
 with main_tab[0]:
     st.subheader("Standard")
-    st.markdown("One-step hashing. Phone normalization is **applied only to phone-like columns** to avoid corrupting emails or IDs.")
+    st.markdown("One-step hashing with minimal choices. Output is a **single `hash` column**, **deduplicated**.")
 
-    # defaults: MD5, preview 10
-    simple_file = st.file_uploader("Upload a file", type=["csv", "tsv", "txt", "xlsx", "xls", "parquet"], key="standard_uploader")
-    c1, c2, c3 = st.columns([1,1,1])
+    # Defaults: MD5, no preview slider, minimal inputs
+    std_file = st.file_uploader("Upload a file", type=["csv", "tsv", "txt", "xlsx", "xls", "parquet"], key="std_uploader")
+    c1, c2 = st.columns([1,1])
     with c1:
-        simple_hash = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="standard_hash")  # MD5 default
+        std_hash = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="std_hash")  # MD5 default
     with c2:
-        normalize_phone_toggle = st.checkbox(
-            "Normalize to 10-digit phones (recommended)",
+        std_norm = st.checkbox(
+            "Normalize to 10-digit phones (auto-detect)",
             value=True,
-            help="Only applied when the selected column is phone-like."
+            help="Runs only if the selected column is phone-like. Emails/IDs are left as-is."
         )
-    with c3:
-        preview_rows_simple = st.slider("Preview rows", 5, 50, 10, key="standard_preview")  # default 10
 
-    if simple_file:
-        df0 = load_df(simple_file)
+    if std_file:
+        df0 = load_df(std_file)
         if df0 is not None and not df0.empty:
-            col = st.selectbox("Column to hash", options=list(df0.columns), index=0, key="standard_col")
-            out_name = st.text_input("Output column name (optional if one column)", value=f"{col}_{simple_hash}", key="standard_outname")
+            col = st.selectbox("Column to hash", options=list(df0.columns), index=0, key="std_col")
 
+            # micro-preview (fixed 10 rows, no slider control)
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.markdown(f"**{simple_file.name}**")
-            st.dataframe(df0.head(preview_rows_simple), use_container_width=True, hide_index=True)
+            st.markdown(f"**{std_file.name}** — showing first 10 rows")
+            st.dataframe(df0.head(10), use_container_width=True, hide_index=True)
 
-            if st.button("Hash now", type="primary", key="standard_go"):
-                df = df0.copy()
-                source = df[col]
+            if st.button("Hash now", type="primary", key="std_go"):
+                src = df0[col]
+                apply_norm = std_norm and looks_like_phone(src, col)
+                if std_norm and not apply_norm:
+                    st.info("Column does not look like a phone field — skipping normalization.")
 
-                apply_norm = normalize_phone_toggle and looks_like_phone(source, col)
-                if normalize_phone_toggle and not apply_norm:
-                    st.info("Column does not look like a phone field — skipping normalization to protect non-phone data.")
+                to_hash = normalize_phone_series(src) if apply_norm else src.astype(str).fillna("")
+                hashed = hash_series(to_hash, std_hash)
 
-                to_hash = normalize_phone_series(source) if apply_norm else source.astype(str).fillna("")
-
-                # if user changed algo after default out_name was set, keep a sensible default
-                if not out_name.strip():
-                    out_name = f"{col}_{simple_hash}"
-
-                df[out_name] = hash_series(to_hash, simple_hash)
-
-                keep_cols = [col]
-                if apply_norm:
-                    norm_col = f"{col}_10digit"
-                    df[norm_col] = normalize_phone_series(source)
-                    keep_cols.append(norm_col)
-                keep_cols.append(out_name)
-                result = df[keep_cols]
+                # Single column, dedup
+                result = pd.DataFrame({"hash": hashed}).drop_duplicates().reset_index(drop=True)
 
                 st.markdown("</div>", unsafe_allow_html=True)
-                st.markdown("### Result preview")
-                st.dataframe(result.head(preview_rows_simple), use_container_width=True, hide_index=True)
+                st.markdown("### Result (first 10 unique hashes)")
+                st.dataframe(result.head(10), use_container_width=True, hide_index=True)
 
                 csv_buf = io.StringIO()
                 result.to_csv(csv_buf, index=False)
                 st.download_button(
-                    "Download hashed file (CSV)",
+                    "Download hashes (CSV)",
                     data=csv_buf.getvalue().encode("utf-8"),
-                    file_name=f"{safe_base(simple_file.name)}_hashed_standard.csv",
+                    file_name=f"{safe_base(std_file.name)}_hashes.csv",
                     mime="text/csv",
                     type="primary",
                 )
@@ -290,253 +277,284 @@ with main_tab[0]:
 
 # ======================= ADVANCED TAB ======================
 with main_tab[1]:
-    # Keep shared state buckets
+    st.subheader("Advanced")
+
+    # ---- Upload first (moved to the top) ----
+    files = st.file_uploader(
+        "Upload file(s)",
+        type=["csv", "tsv", "txt", "xlsx", "xls", "parquet"],
+        accept_multiple_files=True,
+        key="adv_uploader"
+    )
+
+    # State buckets
     if "outputs" not in st.session_state: st.session_state["outputs"] = {}
     if "zip_bytes" not in st.session_state: st.session_state["zip_bytes"] = None
+    if "colmap" not in st.session_state: st.session_state["colmap"] = {}
     if "combined_bytes" not in st.session_state: st.session_state["combined_bytes"] = None
     if "combined_name" not in st.session_state: st.session_state["combined_name"] = "combined_hashed.csv"
-    if "colmap" not in st.session_state: st.session_state["colmap"] = {}
 
-    adv_tabs = st.tabs(["Preview & Options", "Run & Download"])
+    # ---- Preview / Options (same tab) ----
+    st.markdown("#### Options")
 
-    # -------- Tab 1: Preview & Options --------
-    with adv_tabs[0]:
-        st.subheader("Preview & Options")
-
-        # Options (moved into the tab body)
-        oc1, oc2, oc3 = st.columns([1,1,1])
-        with oc1:
-            hash_type = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=2, key="adv_hash_type")
-        with oc2:
-            col_override = st.text_input("Default column if none selected", value="", placeholder="email, cell, id", key="adv_col_override")
-        with oc3:
-            new_col_name = st.text_input("Output column name (if hashing ONE column)", value="", placeholder="e.g., email_sha256", key="adv_newcol")
-
-        retain_mode = st.radio("Columns to keep in output", ["Keep all columns", "Keep source + hashed only", "Keep only hashed column"], index=0, key="adv_retain")
-        rename_text = st.text_area("Rename columns (old=new per line)", height=120, placeholder="email=primary_email\nCell=cell\nZIP=zip", key="adv_renames")
-
-        st.markdown("#### Combine")
-        cc1, cc2, cc3, cc4 = st.columns([1,1,1,2])
-        with cc1:
-            combine_files = st.checkbox("Combine all files", value=True, key="adv_combine")
-        with cc2:
-            add_source_col = st.checkbox("Add source filename", value=True, key="adv_addsrc")
-        with cc3:
-            drop_dupes = st.checkbox("Drop duplicates", value=True, key="adv_dupes")
-        with cc4:
-            combined_format = st.selectbox("Combined format", ["csv", "parquet"], index=0, key="adv_fmt")
-
-        combined_name = st.text_input(
-            "Combined file name",
-            value=st.session_state.get("combined_name", "combined_hashed.csv"),
-            key="adv_combined_name"
-        )
-        if st.session_state["adv_fmt"] == "parquet" and not combined_name.lower().endswith(".parquet"):
-            combined_name = combined_name.rsplit(".", 1)[0] + ".parquet"
-
-        preview_rows_adv = st.slider("Preview rows", 5, 100, 15, key="adv_preview_rows")
-
-        files = st.file_uploader("Upload file(s)", type=["csv", "tsv", "txt", "xlsx", "xls", "parquet"], accept_multiple_files=True, key="adv_uploader")
-
-        # Show per-file preview & column pickers
+    oc1, oc2, oc3 = st.columns([1,1,1])
+    with oc1:
+        hash_type = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="adv_hash_type")  # MD5 default
+    with oc2:
+        # Multiselect default columns (from uploaded files' columns)
+        all_cols = []
         if files:
-            st.info("Choose **Columns to hash** under each file. Leave empty to use the default column above.")
-            for file in files[:12]:
+            for f in files[:20]:  # cap for performance
+                df_tmp = load_df(f)
+                if df_tmp is not None:
+                    all_cols.extend(list(df_tmp.columns))
+        all_cols = sorted(pd.Index(all_cols).unique().tolist()) if all_cols else []
+        default_cols = st.multiselect(
+            "Default columns if none selected",
+            options=all_cols,
+            default=all_cols[:1] if all_cols else [],
+            help="Used only for files where you do not explicitly pick columns below.",
+            key="adv_default_cols"
+        )
+    with oc3:
+        add_suffix = st.text_input(
+            "Suffix for added hash columns (Add mode)",
+            value=f"_{hash_type}",
+            help="Used when 'Keep all & add' is selected. Example: email → email_sha256",
+            key="adv_suffix"
+        )
+
+    # Retention modes with descriptions
+    keep_mode = st.radio(
+        "Columns to keep in output",
+        [
+            "Keep & replace — Replace each selected column with its hash (same name).",
+            "Keep all & add — Keep file as-is and add hash column(s) using the suffix.",
+            "Keep only hashed column(s) — Output just the hash column(s).",
+        ],
+        index=1,  # default to "Keep all & add"
+        help="Choose how hashed values are written into your output.",
+        key="adv_keepmode"
+    )
+
+    # Optional renaming rules
+    rename_text = st.text_area(
+        "Rename columns (old=new per line)",
+        height=110,
+        placeholder="email=primary_email\nCell=cell\nZIP=zip",
+        key="adv_renames"
+    )
+
+    # ---- File previews with per-file column pickers ----
+    if files:
+        st.markdown("#### Preview & Column selection")
+        st.info("Pick **Columns to hash** for each file. If none are picked for a file, we’ll use your **Default columns** above (when present).")
+
+        previews = []
+        for file in files[:12]:
+            df = load_df(file)
+            if df is not None and not df.empty:
+                rows, cols = df.shape
+                st.markdown('<div class="card">', unsafe_allow_html=True)
+                st.markdown(f"**{file.name}**  ·  {human_int(rows)} rows × {cols} columns")
+
+                # Build default for this file
+                existing = st.session_state["colmap"].get(file.name)
+                if not existing:
+                    # filter defaults to only those present in this file
+                    defaults_here = [c for c in st.session_state.get("adv_default_cols", []) if c in df.columns]
+                    if defaults_here:
+                        existing = defaults_here
+                    else:
+                        existing = [df.columns[0]]
+
+                sel = st.multiselect(
+                    f"Columns to hash — {file.name}",
+                    options=list(df.columns),
+                    default=existing,
+                    key=f"adv-ms-{file.name}",
+                )
+                st.session_state["colmap"][file.name] = sel
+
+                # Quick schema + head
+                c1, c2 = st.columns([3, 2])
+                with c1:
+                    st.dataframe(df.head(15), use_container_width=True, hide_index=True)
+                with c2:
+                    schema = pd.DataFrame({"column": df.columns, "dtype": [str(t) for t in df.dtypes]})
+                    st.dataframe(schema, use_container_width=True, hide_index=True)
+                st.markdown('</div>', unsafe_allow_html=True)
+
+                previews.append((file, df))
+    else:
+        st.info("Upload files above to preview and pick columns.")
+
+    st.markdown("---")
+    # ---- Run hashing + Downloads (bottom of the same tab) ----
+    run = st.button("Run hashing", type="primary", use_container_width=True, key="adv_run")
+
+    if run:
+        if not files:
+            st.error("Upload at least one file.")
+        else:
+            renames = parse_renames(rename_text)
+            zipped_buf = io.BytesIO()
+            zf = zipfile.ZipFile(zipped_buf, mode="w", compression=zipfile.ZIP_DEFLATED)
+            st.session_state["outputs"].clear()
+
+            total = len(files)
+            valid = 0
+
+            progress = st.progress(0.0, text="Processing...")
+
+            for i, file in enumerate(files, start=1):
                 df = load_df(file)
-                if df is not None and not df.empty:
-                    rows, cols = df.shape
-                    st.markdown('<div class="card">', unsafe_allow_html=True)
-                    st.markdown(f"**{file.name}**  ·  {human_int(rows)} rows × {cols} columns")
-
-                    # default guess
-                    default_guess = st.session_state["colmap"].get(file.name)
-                    if not default_guess:
-                        if st.session_state["adv_col_override"].strip() in df.columns:
-                            default_guess = [st.session_state["adv_col_override"].strip()]
-                        else:
-                            default_guess = [df.columns[0]]
-
-                    sel = st.multiselect(
-                        f"Columns to hash — {file.name}",
-                        options=list(df.columns),
-                        default=default_guess,
-                        key=f"adv-ms-{file.name}",
-                        help="Pick one or more columns for hashing for this file."
-                    )
-                    st.session_state["colmap"][file.name] = sel
-
-                    c1, c2 = st.columns([3, 2])
-                    with c1:
-                        st.dataframe(df.head(st.session_state["adv_preview_rows"]), use_container_width=True, hide_index=True)
-                    with c2:
-                        schema = pd.DataFrame({"column": df.columns, "dtype": [str(t) for t in df.dtypes]})
-                        st.dataframe(schema, use_container_width=True, hide_index=True)
-                    st.markdown('</div>', unsafe_allow_html=True)
-        else:
-            st.info("Upload files above to preview and pick columns.")
-
-    # -------- Tab 2: Run & Download --------
-    with adv_tabs[1]:
-        st.subheader("Run & Download")
-
-        # Run button
-        run = st.button("Run hashing", type="primary", use_container_width=True, key="adv_run")
-
-        if run:
-            files = st.session_state.get("adv_uploader")
-            if not files:
-                st.error("Upload at least one file on the Preview & Options tab.")
-            else:
-                # Pull options from state
-                hash_type = st.session_state["adv_hash_type"]
-                col_override = st.session_state["adv_col_override"]
-                new_col_name = st.session_state["adv_newcol"]
-                retain_mode = st.session_state["adv_retain"]
-                renames = parse_renames(st.session_state["adv_renames"])
-                combine_files = st.session_state["adv_combine"]
-                add_source_col = st.session_state["adv_addsrc"]
-                drop_dupes = st.session_state["adv_dupes"]
-                combined_format = st.session_state["adv_fmt"]
-                combined_name = st.session_state["adv_combined_name"]
-
-                zipped_buf = io.BytesIO()
-                zf = zipfile.ZipFile(zipped_buf, mode="w", compression=zipfile.ZIP_DEFLATED)
-                st.session_state["outputs"].clear()
-                st.session_state["combined_bytes"] = None
-                st.session_state["combined_name"] = combined_name
-
-                total = len(files)
-                valid = 0
-                combined_frames = []
-
-                progress = st.progress(0.0, text="Processing...")
-                for i, file in enumerate(files, start=1):
-                    df = load_df(file)
-                    if df is None or df.empty:
-                        st.warning(f"Skipped {file.name}: unsupported or empty.")
-                        progress.progress(i / total, text=f"Processed {i}/{total}")
-                        continue
-
-                    if renames:
-                        df = df.rename(columns=renames)
-
-                    # Per-file selected columns
-                    sel = st.session_state["colmap"].get(file.name, [])
-                    sel = [c for c in sel if c in df.columns]
-                    if not sel:
-                        target_col = col_override.strip() if col_override.strip() else df.columns[0]
-                        if target_col not in df.columns:
-                            st.warning(f"Skipped {file.name}: column '{target_col}' not found.")
-                            progress.progress(i / total, text=f"Processed {i}/{total}")
-                            continue
-                        sel = [target_col]
-
-                    # Create hash columns
-                    out_cols_created = []
-                    if len(sel) == 1 and new_col_name.strip():
-                        out_name = new_col_name.strip()
-                        df[out_name] = hash_series(df[sel[0]], hash_type)
-                        out_cols_created.append(out_name)
-                    else:
-                        for c in sel:
-                            out_name = f"{c}_{hash_type}"
-                            df[out_name] = hash_series(df[c], hash_type)
-                            out_cols_created.append(out_name)
-
-                    # Retain policy
-                    if retain_mode == "Keep source + hashed only":
-                        keep = list(dict.fromkeys(sel + out_cols_created))
-                        df = df[keep]
-                    elif retain_mode == "Keep only hashed column":
-                        df = df[out_cols_created]
-
-                    # Individual file out
-                    csv_buf = io.StringIO()
-                    df.to_csv(csv_buf, index=False)
-                    data_bytes = csv_buf.getvalue().encode("utf-8")
-                    out_name = f"{safe_base(file.name)}_hashed.csv"
-                    zf.writestr(out_name, data_bytes)
-                    st.session_state["outputs"][out_name] = data_bytes
-
-                    # Combined
-                    df_comb = df.copy()
-                    if add_source_col:
-                        df_comb.insert(0, "source_filename", file.name)
-                    combined_frames.append(df_comb)
-
-                    valid += 1
+                if df is None or df.empty:
+                    st.warning(f"Skipped {file.name}: unsupported or empty.")
                     progress.progress(i / total, text=f"Processed {i}/{total}")
+                    continue
 
-                # Combined file
-                if combine_files and combined_frames:
-                    combined = pd.concat(combined_frames, axis=0, ignore_index=True, sort=False)
-                    if drop_dupes:
-                        combined = combined.drop_duplicates()
-                    if combined_format == "csv":
-                        cbuf = io.StringIO()
-                        combined.to_csv(cbuf, index=False)
-                        cbytes = cbuf.getvalue().encode("utf-8")
+                if renames:
+                    df = df.rename(columns=renames)
+
+                # Selected columns for this file
+                sel = st.session_state["colmap"].get(file.name, [])
+                sel = [c for c in sel if c in df.columns]
+                if not sel:
+                    defaults_here = [c for c in st.session_state.get("adv_default_cols", []) if c in df.columns]
+                    if defaults_here:
+                        sel = defaults_here
                     else:
-                        pbuf = io.BytesIO()
-                        try:
-                            combined.to_parquet(pbuf, engine="pyarrow", index=False)
-                        except Exception:
-                            combined.to_parquet(pbuf, index=False)
-                        pbuf.seek(0)
-                        cbytes = pbuf.getvalue()
-                    st.session_state["combined_bytes"] = cbytes
-                    st.session_state["combined_name"] = combined_name
-                    zf.writestr(combined_name, cbytes)
+                        sel = [df.columns[0]]
 
-                zf.close()
-                zipped_buf.seek(0)
-                if st.session_state["outputs"]:
-                    st.session_state["zip_bytes"] = zipped_buf.getvalue()
-                    msg = f"Finished {valid} file(s)"
-                    if combine_files and valid > 0:
-                        msg += " • combined file ready"
-                    st.success(msg)
-                else:
-                    st.error("No outputs produced. Check column names and try again.")
+                # Create/replace/add hashed columns
+                keep_choice = st.session_state["adv_keepmode"]
+                if keep_choice.startswith("Keep & replace"):
+                    for c in sel:
+                        df[c] = hash_series(df[c], hash_type)
 
-        # Downloads (always visible here)
-        st.markdown("### Downloads")
-        if st.session_state.get("outputs"):
-            left, right = st.columns([2, 1])
+                    out_df = df
 
-            with left:
-                for name, data_bytes in st.session_state["outputs"].items():
-                    st.download_button(
-                        label=f"Download {name}",
-                        data=data_bytes,
-                        file_name=name,
-                        mime="text/csv",
-                        key=f"dl-{name}",
-                        use_container_width=True,
-                    )
-                if st.session_state.get("combined_bytes"):
-                    st.download_button(
-                        label=f"Download {st.session_state['combined_name']}",
-                        data=st.session_state["combined_bytes"],
-                        file_name=st.session_state["combined_name"],
-                        mime=("text/csv" if st.session_state["combined_name"].endswith(".csv") else "application/octet-stream"),
-                        key="dl-combined",
-                        type="primary",
-                        use_container_width=True,
-                    )
-            with right:
-                if st.session_state.get("zip_bytes"):
-                    st.download_button(
-                        label="Download all as ZIP",
-                        data=st.session_state["zip_bytes"],
-                        file_name="hashed_outputs.zip",
-                        mime="application/zip",
-                        key="dl-zip",
-                        type="primary",
-                        use_container_width=True,
-                    )
+                elif keep_choice.startswith("Keep all & add"):
+                    suffix = st.session_state["adv_suffix"] or f"_{hash_type}"
+                    for c in sel:
+                        out_col = f"{c}{suffix}"
+                        df[out_col] = hash_series(df[c], hash_type)
+
+                    out_df = df
+
+                else:  # Keep only hashed column(s)
+                    tmp = {}
+                    for c in sel:
+                        out_col = f"{c}_{hash_type}"
+                        tmp[out_col] = hash_series(df[c], hash_type)
+                    out_df = pd.DataFrame(tmp)
+
+                # Write individual file
+                csv_buf = io.StringIO()
+                out_df.to_csv(csv_buf, index=False)
+                data_bytes = csv_buf.getvalue().encode("utf-8")
+                out_name = f"{safe_base(file.name)}_hashed.csv"
+                zf.writestr(out_name, data_bytes)
+                st.session_state["outputs"][out_name] = data_bytes
+
+                valid += 1
+                progress.progress(i / total, text=f"Processed {i}/{total}")
+
+            zf.close()
+            zipped_buf.seek(0)
+            if st.session_state["outputs"]:
+                st.session_state["zip_bytes"] = zipped_buf.getvalue()
+                st.success(f"Finished {valid} file(s). Scroll down to download.")
+            else:
+                st.error("No outputs produced. Check column names and try again.")
+
+    # Downloads
+    st.markdown("### Downloads")
+    if st.session_state.get("outputs"):
+        left, right = st.columns([2, 1])
+        with left:
+            for name, data_bytes in st.session_state["outputs"].items():
+                st.download_button(
+                    label=f"Download {name}",
+                    data=data_bytes,
+                    file_name=name,
+                    mime="text/csv",
+                    key=f"dl-{name}",
+                    use_container_width=True,
+                )
+        with right:
+            if st.session_state.get("zip_bytes"):
+                st.download_button(
+                    label="Download all as ZIP",
+                    data=st.session_state["zip_bytes"],
+                    file_name="hashed_outputs.zip",
+                    mime="application/zip",
+                    key="dl-zip",
+                    type="primary",
+                    use_container_width=True,
+                )
+    else:
+        st.info("Nothing to download yet—run hashing above once you’ve set options and previews.")
+
+# ======================= COMBINE TAB (lean) ======================
+with main_tab[2]:
+    st.subheader("Combine (optional)")
+    st.markdown("Merge multiple files into one. Useful when you truly need a single consolidated output.")
+
+    c_files = st.file_uploader(
+        "Upload file(s) to combine",
+        type=["csv", "tsv", "txt", "xlsx", "xls", "parquet"],
+        accept_multiple_files=True,
+        key="combine_uploader"
+    )
+    add_source = st.checkbox("Add source filename column", value=True, help="Adds a 'source_filename' column.")
+    drop_dupes = st.checkbox("Drop duplicate rows", value=True)
+    c_fmt = st.selectbox("Output format", ["csv", "parquet"], index=0)
+    c_name = st.text_input("Combined file name", value="combined_output.csv")
+    if c_fmt == "parquet" and not c_name.lower().endswith(".parquet"):
+        c_name = c_name.rsplit(".", 1)[0] + ".parquet"
+
+    if st.button("Combine files", type="primary", key="combine_go"):
+        if not c_files:
+            st.error("Upload at least two files.")
         else:
-            st.info("Nothing to download yet—click **Run hashing** above once you’ve set options on the first tab.")
+            frames = []
+            for f in c_files:
+                df = load_df(f)
+                if df is not None and not df.empty:
+                    if add_source:
+                        df.insert(0, "source_filename", f.name)
+                    frames.append(df)
+            if frames:
+                combined = pd.concat(frames, axis=0, ignore_index=True, sort=False)
+                if drop_dupes:
+                    combined = combined.drop_duplicates()
+
+                if c_fmt == "csv":
+                    buf = io.StringIO()
+                    combined.to_csv(buf, index=False)
+                    data = buf.getvalue().encode("utf-8")
+                    mime = "text/csv"
+                else:
+                    pbuf = io.BytesIO()
+                    try:
+                        combined.to_parquet(pbuf, engine="pyarrow", index=False)
+                    except Exception:
+                        combined.to_parquet(pbuf, index=False)
+                    pbuf.seek(0)
+                    data = pbuf.getvalue()
+                    mime = "application/octet-stream"
+
+                st.download_button(
+                    f"Download {c_name}",
+                    data=data,
+                    file_name=c_name,
+                    mime=mime,
+                    type="primary",
+                )
+            else:
+                st.error("No valid, non-empty files to combine.")
 
 # ================ FOOTER (company name at very bottom) ================
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
