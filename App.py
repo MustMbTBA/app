@@ -13,7 +13,7 @@ LOGO_PATH = r"C:\Users\musta\Downloads\download.png"  # update if you move the f
 
 st.set_page_config(page_title=f"{TOOL_NAME} • {COMPANY_NAME}", page_icon=None, layout="wide")
 
-# ================ THEME / STYLES (blue) ================
+# ================ THEME / STYLES (brand = #061d4c) ================
 st.markdown(
     """
     <style>
@@ -23,19 +23,23 @@ st.markdown(
         --bg1:#eff4ff;
         --bg2:#eaf1ff;
         --panel:#ffffff;
-        --ink:#0b1a4a;
+        --ink:#061d4c;         /* deep brand text */
         --muted:#6e7b99;
         --line:#d9e2ff;
-        --brand:#0f2a80;
-        --brand-2:#2953d6;
-        --brand-3:#4a74ff;
+
+        /* Brand set — all aligned to #061d4c per request */
+        --brand:#061d4c;
+        --brand-2:#061d4c;
+        --brand-3:#061d4c;
+
         --accent:#b7c8ff;
         --focus:#3aa0ff;
+
         --input-bg:#ffffff;
-        --input-text:#0b1a4a;
+        --input-text:#061d4c;
         --placeholder:#8fa1c0;
         --input-border:#b9c8ef;
-        --ring:0 0 0 3px rgba(74,116,255,.28);
+        --ring:0 0 0 3px rgba(6,29,76,.28); /* #061d4c with alpha */
     }
 
     *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
@@ -97,7 +101,7 @@ st.markdown(
     [data-testid="stRadio"] [role="radiogroup"] p,
     [data-testid="stRadio"] [role="radiogroup"] span{color:var(--ink)!important}
     [data-testid="stRadio"] [role="radiogroup"] label{border-radius:12px;padding:.35rem .6rem;font-weight:600!important}
-    [data-testid="stRadio"] [role="radiogroup"] label:hover{background:#2947e214}
+    [data-testid="stRadio"] [role="radiogroup"] label:hover{background:rgba(6,29,76,.08)}
     [data-testid="stRadio"] [role="radiogroup"] input:focus+div,
     [data-testid="stRadio"] [role="radiogroup"] input:focus-visible+div{outline:none;box-shadow:var(--ring);border-radius:12px}
 
@@ -113,7 +117,7 @@ st.markdown(
         border:1px solid var(--line);
         border-radius:18px;
         padding:1rem 1rem 1.1rem 1rem;
-        box-shadow:0 14px 30px rgba(18,42,128,.08);
+        box-shadow:0 14px 30px rgba(6,29,76,.08);
         margin-bottom:.9rem
     }
 
@@ -170,7 +174,7 @@ def safe_base(name: str) -> str:
 
 def human_int(n): return f"{n:,}"
 
-# ---------- Robust file loader (fixes “No columns to parse” & more) ----------
+# ---------- Robust file loader ----------
 def load_df(file):
     """
     Robust reader for csv/tsv/txt/xlsx/parquet UploadedFile objects.
@@ -183,17 +187,14 @@ def load_df(file):
 
     name = (getattr(file, "name", "") or "").lower()
 
-    # Helper to reset the file pointer safely
     def _rewind():
-        try:
-            file.seek(0)
-        except Exception:
-            pass
+        try: file.seek(0)
+        except Exception: pass
 
-    # If it's actually an XLSX/ZIP container, read as Excel even if named .csv
+    # Misnamed Excel (ZIP header)
     try:
-        head = file.getvalue()[:4]  # Streamlit UploadedFile supports .getvalue()
-        if head.startswith(b"PK\x03\x04"):  # ZIP magic -> likely .xlsx
+        head = file.getvalue()[:4]
+        if head.startswith(b"PK\x03\x04"):
             _rewind()
             return pd.read_excel(file)
     except Exception:
@@ -202,18 +203,15 @@ def load_df(file):
     # Parquet
     if name.endswith(".parquet"):
         try:
-            _rewind()
-            return pd.read_parquet(file, engine="pyarrow")
+            _rewind(); return pd.read_parquet(file, engine="pyarrow")
         except Exception:
-            _rewind()
-            return pd.read_parquet(file)
+            _rewind(); return pd.read_parquet(file)
 
     # Excel
     if name.endswith((".xlsx", ".xls")):
-        _rewind()
-        return pd.read_excel(file)
+        _rewind(); return pd.read_excel(file)
 
-    # Text-like (csv/tsv/txt/unknown)
+    # Text-like
     attempts = [
         dict(sep=None, engine="python", encoding="utf-8", on_bad_lines="skip"),
         dict(sep=None, engine="python", encoding="utf-8-sig", on_bad_lines="skip"),
@@ -228,7 +226,6 @@ def load_df(file):
         except Exception:
             pass
 
-    # Try common fixed delimiters with/without header
     for sep in [",", ";", "\t", "|"]:
         for header in [0, None]:
             try:
@@ -241,14 +238,12 @@ def load_df(file):
             except Exception:
                 continue
 
-    try:
-        _rewind()
-    except Exception:
-        pass
+    try: _rewind()
+    except Exception: pass
     st.warning(f"Could not read {getattr(file, 'name', 'file')}: unsupported format or empty content.")
     return None
 
-# Phone normalization helpers (used in Standard only, with auto-detect)
+# Phone normalization helpers (Standard tab auto-detect)
 _digit_re = re.compile(r"\D+")
 def normalize_phone_value(x: str) -> str:
     if x is None: return ""
@@ -268,7 +263,7 @@ def looks_like_phone(series: pd.Series, colname: str) -> bool:
         return True
     stripped = series.astype(str).map(lambda x: _digit_re.sub("", x))
     phone_like = stripped.map(lambda d: len(d) >= 10 or (len(d) == 11 and d.startswith("1")))
-    return phone_like.mean() >= 0.6  # 60% heuristic
+    return phone_like.mean() >= 0.6
 
 # ======================= MAIN TABS =======================
 main_tab = st.tabs(["Standard", "Advanced", "Combine"])
@@ -278,11 +273,10 @@ with main_tab[0]:
     st.subheader("Standard")
     st.markdown("One-step hashing with minimal choices. Output is a **single `hash` column**, **deduplicated**.")
 
-    # Defaults: MD5, minimal inputs
     std_file = st.file_uploader("Upload a file", type=["csv", "tsv", "txt", "xlsx", "xls", "parquet"], key="std_uploader")
     c1, c2 = st.columns([1,1])
     with c1:
-        std_hash = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="std_hash")  # MD5 default
+        std_hash = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="std_hash")
     with c2:
         std_norm = st.checkbox(
             "Normalize to 10-digit phones (auto-detect)",
@@ -295,7 +289,6 @@ with main_tab[0]:
         if df0 is not None and not df0.empty:
             col = st.selectbox("Column to hash", options=list(df0.columns), index=0, key="std_col")
 
-            # Micro-preview (fixed 10 rows)
             st.markdown('<div class="card">', unsafe_allow_html=True)
             st.markdown(f"**{std_file.name}** — showing first 10 rows")
             st.dataframe(df0.head(10), use_container_width=True, hide_index=True)
@@ -309,7 +302,6 @@ with main_tab[0]:
                 to_hash = normalize_phone_series(src) if apply_norm else src.astype(str).fillna("")
                 hashed = hash_series(to_hash, std_hash)
 
-                # Single column, dedup
                 result = pd.DataFrame({"hash": hashed}).drop_duplicates().reset_index(drop=True)
 
                 st.markdown("</div>", unsafe_allow_html=True)
@@ -332,7 +324,6 @@ with main_tab[0]:
 with main_tab[1]:
     st.subheader("Advanced")
 
-    # ---- Upload first (top) ----
     files = st.file_uploader(
         "Upload file(s)",
         type=["csv", "tsv", "txt", "xlsx", "xls", "parquet"],
@@ -340,22 +331,19 @@ with main_tab[1]:
         key="adv_uploader"
     )
 
-    # State buckets
     if "outputs" not in st.session_state: st.session_state["outputs"] = {}
     if "zip_bytes" not in st.session_state: st.session_state["zip_bytes"] = None
     if "colmap" not in st.session_state: st.session_state["colmap"] = {}
 
-    # ---- Preview / Options (same tab) ----
     st.markdown("#### Options")
 
     oc1, oc2, oc3 = st.columns([1,1,1])
     with oc1:
-        hash_type = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="adv_hash_type")  # MD5 default
+        hash_type = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="adv_hash_type")
     with oc2:
-        # Multiselect default columns (from uploaded files’ columns)
         all_cols = []
         if files:
-            for f in files[:20]:  # cap for performance
+            for f in files[:20]:
                 df_tmp = load_df(f)
                 if df_tmp is not None and not df_tmp.empty:
                     all_cols.extend(list(df_tmp.columns))
@@ -375,7 +363,6 @@ with main_tab[1]:
             key="adv_suffix"
         )
 
-    # Retention modes with your descriptions
     keep_mode = st.radio(
         "Columns to keep in output",
         [
@@ -388,7 +375,6 @@ with main_tab[1]:
         key="adv_keepmode"
     )
 
-    # Optional renaming rules
     rename_text = st.text_area(
         "Rename columns (old=new per line)",
         height=110,
@@ -396,7 +382,6 @@ with main_tab[1]:
         key="adv_renames"
     )
 
-    # ---- File previews with per-file column pickers ----
     if files:
         st.markdown("#### Preview & Column selection")
         st.info("Pick **Columns to hash** for each file. If none are picked for a file, we’ll use your **Default columns** above (when present).")
@@ -408,14 +393,10 @@ with main_tab[1]:
                 st.markdown('<div class="card">', unsafe_allow_html=True)
                 st.markdown(f"**{file.name}**  ·  {human_int(rows)} rows × {cols} columns")
 
-                # Build default for this file
                 existing = st.session_state["colmap"].get(file.name)
                 if not existing:
                     defaults_here = [c for c in st.session_state.get("adv_default_cols", []) if c in df.columns]
-                    if defaults_here:
-                        existing = defaults_here
-                    else:
-                        existing = [df.columns[0]]
+                    existing = defaults_here if defaults_here else [df.columns[0]]
 
                 sel = st.multiselect(
                     f"Columns to hash — {file.name}",
@@ -425,7 +406,6 @@ with main_tab[1]:
                 )
                 st.session_state["colmap"][file.name] = sel
 
-                # Quick schema + head
                 c1, c2 = st.columns([3, 2])
                 with c1:
                     st.dataframe(df.head(15), use_container_width=True, hide_index=True)
@@ -437,7 +417,6 @@ with main_tab[1]:
         st.info("Upload files above to preview and pick columns.")
 
     st.markdown("---")
-    # ---- Run hashing + Downloads (bottom of the same tab) ----
     run = st.button("Run hashing", type="primary", use_container_width=True, key="adv_run")
 
     if run:
@@ -449,8 +428,7 @@ with main_tab[1]:
             zf = zipfile.ZipFile(zipped_buf, mode="w", compression=zipfile.ZIP_DEFLATED)
             st.session_state["outputs"].clear()
 
-            total = len(files)
-            valid = 0
+            total = len(files); valid = 0
             progress = st.progress(0.0, text="Processing...")
 
             for i, file in enumerate(files, start=1):
@@ -460,18 +438,13 @@ with main_tab[1]:
                     progress.progress(i / total, text=f"Processed {i}/{total}")
                     continue
 
-                if renames:
-                    df = df.rename(columns=renames)
+                if renames: df = df.rename(columns=renames)
 
-                # Selected columns for this file
                 sel = st.session_state["colmap"].get(file.name, [])
                 sel = [c for c in sel if c in df.columns]
                 if not sel:
                     defaults_here = [c for c in st.session_state.get("adv_default_cols", []) if c in df.columns]
-                    if defaults_here:
-                        sel = defaults_here
-                    else:
-                        sel = [df.columns[0]]
+                    sel = defaults_here if defaults_here else [df.columns[0]]
 
                 keep_choice = st.session_state["adv_keepmode"]
 
@@ -488,13 +461,9 @@ with main_tab[1]:
                     out_df = df
 
                 else:  # Keep only hashed column(s)
-                    tmp = {}
-                    for c in sel:
-                        out_col = f"{c}_{hash_type}"
-                        tmp[out_col] = hash_series(df[c], hash_type)
+                    tmp = {f"{c}_{hash_type}": hash_series(df[c], hash_type) for c in sel}
                     out_df = pd.DataFrame(tmp)
 
-                # Write individual file
                 csv_buf = io.StringIO()
                 out_df.to_csv(csv_buf, index=False)
                 data_bytes = csv_buf.getvalue().encode("utf-8")
@@ -513,7 +482,6 @@ with main_tab[1]:
             else:
                 st.error("No outputs produced. Check column names and try again.")
 
-    # Downloads
     st.markdown("### Downloads")
     if st.session_state.get("outputs"):
         left, right = st.columns([2, 1])
@@ -602,4 +570,3 @@ with main_tab[2]:
 
 # ================ FOOTER (company name at very bottom) ================
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
-
