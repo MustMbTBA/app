@@ -118,6 +118,16 @@ st.markdown(
     .stAlert{border-radius:14px}
     .meta{color:var(--muted);font-size:.95rem;margin-top:.15rem}
     .underline-accent{box-shadow:inset 0 -6px 0 var(--accent)}
+
+    /* --- Prevent header text like 'Email' becoming 'E mail' --- */
+    .stDataFrame table { letter-spacing: 0 !important; }
+    .stDataFrame thead tr th div,
+    .stDataFrame thead tr th span,
+    [data-testid="stDataFrame"] [data-testid="columnHeaderName"]{
+      white-space: nowrap !important;
+      word-break: keep-all !important;
+      hyphens: none !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -158,17 +168,14 @@ def safe_base(name: str) -> str:
 
 def human_int(n): return f"{n:,}"
 
-# ---------- Robust file loader ----------
-def load_df(file, force_single: bool = False):
+# ---------- Robust file loader with anti-over-split ----------
+def load_df(file):
     """
     Robust reader for csv/tsv/txt/xlsx/parquet UploadedFile objects.
-    - Auto-infers delimiter & encoding for text files.
-    - Resets stream between attempts.
-    - Detects XLSX content even if extension says .csv.
-    - Falls back to headerless read when needed.
-    - NEW: force_single=True -> read entire file as one column (header auto-detected).
+    Adds an anti-over-split heuristic so single-column files don't get split
+    into 'E' and 'ail' (or similar) by mistaken delimiter detection.
     """
-    import pandas as pd, io
+    import pandas as pd
 
     name = (getattr(file, "name", "") or "").lower()
 
@@ -176,61 +183,44 @@ def load_df(file, force_single: bool = False):
         try: file.seek(0)
         except Exception: pass
 
-    # ---------- NEW: Single-column hard mode ----------
-    if force_single:
-        # Read raw text with tolerant decoding
-        encodings = ["utf-8", "utf-8-sig", "latin1"]
-        text = None
-        for enc in encodings:
-            try:
-                _rewind()
-                text = file.getvalue().decode(enc, errors="replace")
-                break
-            except Exception:
-                continue
-        if text is None:
-            st.warning(f"Could not read {getattr(file, 'name', 'file')} as text.")
-            return None
+    def _collapse_if_single_col_data(df: pd.DataFrame) -> pd.DataFrame:
+        if df is None or df.shape[1] <= 1:
+            return df
+        nn = df.notna().sum()
+        rows = len(df)
+        if rows == 0:
+            return df
+        top_col = nn.idxmax()
+        top_ratio = nn.max() / max(rows, 1)
+        others_nonzero = (nn.drop(index=top_col) > 0).sum()
+        if top_ratio >= 0.9 and others_nonzero == 0:
+            joined_name = "".join([str(c) for c in df.columns if str(c).strip()])
+            new_name = joined_name if 1 <= len(joined_name) <= 40 else str(top_col)
+            return pd.DataFrame({new_name: df[top_col]})
+        return df
 
-        lines = text.splitlines()
-        if not lines:
-            st.warning(f"{getattr(file,'name','file')} appears to be empty.")
-            return None
-
-        # Heuristic: if the first line contains common delimiters, it's likely data, not a header
-        first = lines[0]
-        has_delim = any(d in first for d in [",", ";", "\t", "|"])
-        if has_delim:
-            col_name = "col_1"
-            data = lines
-        else:
-            col_name = first.strip() or "col_1"
-            data = lines[1:]
-
-        return pd.DataFrame({col_name: data})
-
-    # ---------- Normal robust mode ----------
     # Misnamed Excel (ZIP header)
     try:
         head = file.getvalue()[:4]
         if head.startswith(b"PK\x03\x04"):
             _rewind()
-            return pd.read_excel(file)
+            df = pd.read_excel(file)
+            return _collapse_if_single_col_data(df)
     except Exception:
         pass
 
     # Parquet
     if name.endswith(".parquet"):
         try:
-            _rewind(); return pd.read_parquet(file, engine="pyarrow")
+            _rewind(); df = pd.read_parquet(file, engine="pyarrow"); return df
         except Exception:
-            _rewind(); return pd.read_parquet(file)
+            _rewind(); df = pd.read_parquet(file); return df
 
     # Excel
     if name.endswith((".xlsx", ".xls")):
-        _rewind(); return pd.read_excel(file)
+        _rewind(); df = pd.read_excel(file); return _collapse_if_single_col_data(df)
 
-    # Text-like
+    # Text-like attempts (auto-detect delimiter/encoding)
     attempts = [
         dict(sep=None, engine="python", encoding="utf-8", on_bad_lines="skip"),
         dict(sep=None, engine="python", encoding="utf-8-sig", on_bad_lines="skip"),
@@ -241,19 +231,21 @@ def load_df(file, force_single: bool = False):
             _rewind()
             df = pd.read_csv(file, **kw)
             if df is not None and df.shape[1] > 0:
-                return df
+                return _collapse_if_single_col_data(df)
         except Exception:
             pass
 
+    # Fixed delimiters + header/no header
     for sep in [",", ";", "\t", "|"]:
         for header in [0, None]:
             try:
                 _rewind()
-                df = pd.read_csv(file, sep=sep, engine="python", encoding="utf-8", on_bad_lines="skip", header=header)
+                df = pd.read_csv(file, sep=sep, engine="python", encoding="utf-8",
+                                 on_bad_lines="skip", header=header)
                 if df is not None and df.shape[1] > 0:
                     if header is None:
                         df.columns = [f"col_{i+1}" for i in range(df.shape[1])]
-                    return df
+                    return _collapse_if_single_col_data(df)
             except Exception:
                 continue
 
@@ -261,7 +253,6 @@ def load_df(file, force_single: bool = False):
     except Exception: pass
     st.warning(f"Could not read {getattr(file, 'name', 'file')}: unsupported format or empty content.")
     return None
-
 
 # Phone normalization helpers
 _digit_re = re.compile(r"\D+")
@@ -310,7 +301,8 @@ with main_tab[0]:
             col = st.selectbox("Column to hash", options=list(df0.columns), index=0, key="std_col")
 
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            st.markdown(f"**{std_file.name}** — showing first 10 rows")
+            rows, cols = df0.shape
+            st.caption(f"Source preview shape: {rows:,} × {cols}")
             st.dataframe(df0.head(10), use_container_width=True, hide_index=True)
 
             if st.button("Hash now", type="primary", key="std_go"):
@@ -321,11 +313,12 @@ with main_tab[0]:
 
                 to_hash = normalize_phone_series(src) if apply_norm else src.astype(str).fillna("")
                 hashed = hash_series(to_hash, std_hash)
-
                 result = pd.DataFrame({"hash": hashed}).drop_duplicates().reset_index(drop=True)
 
                 st.markdown("</div>", unsafe_allow_html=True)
                 st.markdown("### Result (first 10 unique hashes)")
+                r_rows, r_cols = result.shape
+                st.caption(f"Result shape: {r_rows:,} × {r_cols}")
                 st.dataframe(result.head(10), use_container_width=True, hide_index=True)
 
                 csv_buf = io.StringIO()
@@ -357,12 +350,12 @@ with main_tab[1]:
 
     st.markdown("#### Options")
 
-    # Global options (apply to each file; per-file pickers removed)
+    # Global options (apply to each file)
     oc1, oc2, oc3 = st.columns([1,1,1])
     with oc1:
         adv_hash = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="adv_hash_type")
     with oc2:
-        # Global 'Columns to hash' across files (we will intersect with each file's columns)
+        # Global 'Columns to hash' across files (intersect per file)
         all_cols = []
         if files:
             for f in files[:20]:
@@ -385,14 +378,12 @@ with main_tab[1]:
             key="adv_suffix"
         )
 
-    # Normalize option
     adv_norm = st.checkbox(
         "Normalize to 10-digit phones (auto-detect per selected column)",
         value=True,
         help="If a selected column appears to be phone-like, values are normalized to 10 digits before hashing."
     )
 
-    # Retention modes with descriptions
     keep_mode = st.radio(
         "Columns to keep in output",
         [
@@ -405,7 +396,6 @@ with main_tab[1]:
         key="adv_keepmode"
     )
 
-    # Optional renaming, gated by a checkbox
     rename_on = st.checkbox("Manually rename columns", value=False)
     rename_text = ""
     if rename_on:
@@ -423,15 +413,12 @@ with main_tab[1]:
             df = load_df(file)
             if df is not None and not df.empty:
                 if rename_on and rename_text.strip():
-                    # apply renames on a copy for preview
                     df = df.rename(columns=parse_renames(rename_text))
 
-                # determine columns to hash for this file (intersection)
                 sel = [c for c in cols_to_hash if c in df.columns]
                 if not sel and len(df.columns) > 0:
-                    sel = [df.columns[0]]  # conservative fallback
+                    sel = [df.columns[0]]
 
-                # build preview output
                 if keep_mode.startswith("Keep & replace"):
                     out_df = df.copy()
                     for c in sel:
@@ -456,7 +443,8 @@ with main_tab[1]:
                     out_df = pd.DataFrame(cols)
 
                 st.markdown('<div class="card">', unsafe_allow_html=True)
-                st.markdown(f"**{file.name}** — previewing first 15 rows of the final output")
+                o_rows, o_cols = out_df.shape
+                st.caption(f"{file.name} — preview shape: {o_rows:,} × {o_cols}")
                 st.dataframe(out_df.head(15), use_container_width=True, hide_index=True)
                 st.markdown('</div>', unsafe_allow_html=True)
     else:
@@ -581,39 +569,22 @@ with main_tab[2]:
 
     def _coerce_to_single_hash(df: pd.DataFrame) -> pd.DataFrame:
         """
-        Standardize a dataframe to a single 'hash' column when possible:
-        - If a 'hash' column exists and it’s the only column, keep it.
-        - If a 'hash' column exists with others, keep just that col (unless add_source is True).
-        - If exactly one column and it's unnamed/odd (e.g., 'Unnamed: 0'), rename to 'hash'.
-        - If multiple columns and none named 'hash', try the first non-empty column as 'hash'.
+        Standardize a dataframe to one 'hash' column when possible (unless source is included).
         """
         if add_source:
-            # When source column is included, keep structure as-is (we’ll only trim odd unnamed-only cases)
-            if "hash" in df.columns and df.shape[1] > 2:
-                return df[["hash"]].copy()
-            return df
+            return df  # keep as-is when source column is requested
 
-        # No source column -> try to output one clean 'hash' column
         if "hash" in df.columns:
             return df[["hash"]].copy()
 
-        # If exactly one column, rename to 'hash'
         if df.shape[1] == 1:
             df2 = df.copy()
             df2.columns = ["hash"]
             return df2
 
-        # Heuristic: drop fully empty columns; prefer first meaningful column
-        df2 = df.copy()
-        empty_cols = [c for c in df2.columns if df2[c].isna().all()]
-        df2 = df2.drop(columns=empty_cols) if empty_cols else df2
-
-        # If first column looks unnamed, still take it as hash
+        # Drop all-empty columns and take the first remaining as 'hash'
+        df2 = df.drop(columns=[c for c in df.columns if df[c].isna().all()]) if df.shape[1] else df
         first = df2.columns[0]
-        if re.match(r"^Unnamed", str(first), flags=re.I):
-            return df2[[first]].rename(columns={first: "hash"})
-
-        # Fallback: take first column and call it 'hash'
         return df2[[first]].rename(columns={first: "hash"})
 
     if st.button("Combine files", type="primary", key="combine_go"):
@@ -624,12 +595,9 @@ with main_tab[2]:
             for f in c_files:
                 df = load_df(f)
                 if df is not None and not df.empty:
-                    # Standardize to one 'hash' column unless source col requested
                     df_std = _coerce_to_single_hash(df)
-                    if add_source:
-                        # ensure 'source_filename' exists if requested
-                        if "source_filename" not in df_std.columns:
-                            df_std.insert(0, "source_filename", f.name)
+                    if add_source and "source_filename" not in df_std.columns:
+                        df_std.insert(0, "source_filename", f.name)
                     frames.append(df_std)
 
             if frames:
@@ -664,5 +632,4 @@ with main_tab[2]:
 
 # ================ FOOTER (company name at very bottom) ================
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
-
 
