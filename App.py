@@ -23,11 +23,10 @@ st.markdown(
         --bg1:#eff4ff;
         --bg2:#eaf1ff;
         --panel:#ffffff;
-        --ink:#061d4c;         /* deep brand text */
+        --ink:#061d4c;
         --muted:#6e7b99;
         --line:#d9e2ff;
 
-        /* Brand set — all aligned to #061d4c per request */
         --brand:#061d4c;
         --brand-2:#061d4c;
         --brand-3:#061d4c;
@@ -39,7 +38,7 @@ st.markdown(
         --input-text:#061d4c;
         --placeholder:#8fa1c0;
         --input-border:#b9c8ef;
-        --ring:0 0 0 3px rgba(6,29,76,.28); /* #061d4c with alpha */
+        --ring:0 0 0 3px rgba(6,29,76,.28);
     }
 
     *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
@@ -53,7 +52,6 @@ st.markdown(
     .block-container{padding:0 1.25rem 2rem 1.25rem;max-width:1200px}
     [data-testid="stSidebar"]{background:var(--panel);border-right:1px solid var(--line);padding-top:.75rem}
 
-    /* ======= Top-left banner (logo only) ======= */
     .brandbar{
         position:sticky; top:0; z-index:999;
         background:#fff; border-bottom:1px solid var(--line);
@@ -62,7 +60,6 @@ st.markdown(
     .brandwrap{display:flex; align-items:center; gap:10px; max-width:1200px; margin:0 auto; padding:0 1.25rem; justify-content:flex-start;}
     .brandlogo{ max-height:46px; }
 
-    /* ======= Footer with company name ======= */
     .footer{
         background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 60%,var(--brand-3) 100%);
         color:#fff; margin:2rem -1.25rem 0 -1.25rem; border-top:1px solid var(--line);
@@ -74,7 +71,7 @@ st.markdown(
     h2{font-size:1.35rem;line-height:1.28;margin-top:.25rem}
     .subtitle{color:var(--muted);font-size:1.02rem;margin:.25rem 0 1rem 0;font-weight:500}
 
-    label,.st-emotion-cache-1erivf3{color:var(--ink)!important;opacity:1!important;font-weight:600!important}
+    label{color:var(--ink)!important;font-weight:600!important}
 
     input,textarea,select{
         font-size:16px!important;color:var(--input-text)!important;
@@ -84,7 +81,7 @@ st.markdown(
         background:var(--input-bg)!important;color:var(--input-text)!important;border:1px solid var(--input-border)!important;border-radius:14px!important;
         box-shadow:none!important;padding:.7rem .9rem!important
     }
-    .stTextInput input::placeholder,.stTextArea textarea::placeholder{color:var(--placeholder)!important;opacity:1!important}
+    .stTextInput input::placeholder,.stTextArea textarea::placeholder{color:var(--placeholder)!important}
     .stTextInput input:focus,.stTextArea textarea:focus{box-shadow:var(--ring)!important;border-color:var(--brand-3)!important;outline:none!important}
 
     .stSelectbox div[data-baseweb="select"]>div{
@@ -92,18 +89,10 @@ st.markdown(
         border-radius:14px!important;min-height:48px!important;padding:4px 8px!important;
         font-family:"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important
     }
-    .stSelectbox div[data-baseweb="select"] input{color:var(--input-text)!important}
-    .stSelectbox div[data-baseweb="select"] div[role="listbox"]{background:#fff!important;color:var(--input-text)!important;border:1px solid var(--line)!important}
-    .stSelectbox div[data-baseweb="select"] [role="option"]{color:var(--input-text)!important}
 
-    [data-testid="stRadio"]>label{color:var(--ink)!important}
-    [data-testid="stRadio"] [role="radiogroup"] label,
-    [data-testid="stRadio"] [role="radiogroup"] p,
-    [data-testid="stRadio"] [role="radiogroup"] span{color:var(--ink)!important}
     [data-testid="stRadio"] [role="radiogroup"] label{border-radius:12px;padding:.35rem .6rem;font-weight:600!important}
     [data-testid="stRadio"] [role="radiogroup"] label:hover{background:rgba(6,29,76,.08)}
-    [data-testid="stRadio"] [role="radiogroup"] input:focus+div,
-    [data-testid="stRadio"] [role="radiogroup"] input:focus-visible+div{outline:none;box-shadow:var(--ring);border-radius:12px}
+    [data-testid="stRadio"] [role="radiogroup"] input:focus+div{box-shadow:var(--ring);border-radius:12px}
 
     .stTabs [data-baseweb="tab-list"]{gap:.5rem;margin-bottom:.75rem}
     .stTabs [data-baseweb="tab"]{
@@ -127,12 +116,7 @@ st.markdown(
     }
     .stDownloadButton button:hover,.stButton button:hover{filter:brightness(1.06)}
     .stAlert{border-radius:14px}
-
     .meta{color:var(--muted);font-size:.95rem;margin-top:.15rem}
-    .kpi{display:grid;grid-template-columns:repeat(4,minmax(140px,1fr));gap:.65rem;margin:.65rem 0 .7rem 0}
-    .kpi>div{background:#fff;border:1px solid var(--line);border-radius:12px;padding:.7rem .9rem;text-align:left}
-    .kpi .h{font-size:.8rem;color: var(--muted)}
-    .kpi .v{font-size:1.06rem;font-weight:700;color: var(--ink)}
     .underline-accent{box-shadow:inset 0 -6px 0 var(--accent)}
     </style>
     """,
@@ -149,7 +133,7 @@ st.markdown('</div></div>', unsafe_allow_html=True)
 
 # ================ APP TITLE =================
 st.title(TOOL_NAME)
-st.markdown('<div class="subtitle">Standard: minimal, one-column deduped hashes. Advanced: batch with flexible retention and defaults.</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Standard: minimal, one-column deduped hashes. Advanced: batch with flexible preview that shows final output.</div>', unsafe_allow_html=True)
 
 # ---------------- Utilities ----------------
 def parse_renames(txt: str):
@@ -243,7 +227,7 @@ def load_df(file):
     st.warning(f"Could not read {getattr(file, 'name', 'file')}: unsupported format or empty content.")
     return None
 
-# Phone normalization helpers (Standard tab auto-detect)
+# Phone normalization helpers
 _digit_re = re.compile(r"\D+")
 def normalize_phone_value(x: str) -> str:
     if x is None: return ""
@@ -324,6 +308,7 @@ with main_tab[0]:
 with main_tab[1]:
     st.subheader("Advanced")
 
+    # Upload at top
     files = st.file_uploader(
         "Upload file(s)",
         type=["csv", "tsv", "txt", "xlsx", "xls", "parquet"],
@@ -333,14 +318,15 @@ with main_tab[1]:
 
     if "outputs" not in st.session_state: st.session_state["outputs"] = {}
     if "zip_bytes" not in st.session_state: st.session_state["zip_bytes"] = None
-    if "colmap" not in st.session_state: st.session_state["colmap"] = {}
 
     st.markdown("#### Options")
 
+    # Global options (apply to each file; per-file pickers removed)
     oc1, oc2, oc3 = st.columns([1,1,1])
     with oc1:
-        hash_type = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="adv_hash_type")
+        adv_hash = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="adv_hash_type")
     with oc2:
+        # Global 'Columns to hash' across files (we will intersect with each file's columns)
         all_cols = []
         if files:
             for f in files[:20]:
@@ -348,21 +334,29 @@ with main_tab[1]:
                 if df_tmp is not None and not df_tmp.empty:
                     all_cols.extend(list(df_tmp.columns))
         all_cols = sorted(pd.Index(all_cols).unique().tolist()) if all_cols else []
-        default_cols = st.multiselect(
-            "Default columns if none selected",
+        cols_to_hash = st.multiselect(
+            "Columns to hash",
             options=all_cols,
             default=all_cols[:1] if all_cols else [],
-            help="Used only for files where you do not explicitly pick columns below.",
-            key="adv_default_cols"
+            help="These columns will be hashed in each file if present.",
+            key="adv_cols_to_hash"
         )
     with oc3:
-        add_suffix = st.text_input(
+        suffix = st.text_input(
             "Suffix for added hash columns (Add mode)",
-            value=f"_{hash_type}",
-            help="Used when 'Keep all & add' is selected. Example: email → email_sha256",
+            value=f"_{adv_hash}",
+            help="Used only for 'Keep all & add'. Example: email → email_sha256",
             key="adv_suffix"
         )
 
+    # Normalize option
+    adv_norm = st.checkbox(
+        "Normalize to 10-digit phones (auto-detect per selected column)",
+        value=True,
+        help="If a selected column appears to be phone-like, values are normalized to 10 digits before hashing."
+    )
+
+    # Retention modes with descriptions
     keep_mode = st.radio(
         "Columns to keep in output",
         [
@@ -371,50 +365,66 @@ with main_tab[1]:
             "Keep only hashed column(s) — Output just the hash column(s).",
         ],
         index=1,
-        help="Choose how hashed values are written into your output.",
+        help="How hashed values are written to the output.",
         key="adv_keepmode"
     )
 
-    rename_text = st.text_area(
-        "Rename columns (old=new per line)",
-        height=110,
-        placeholder="email=primary_email\nCell=cell\nZIP=zip",
-        key="adv_renames"
-    )
+    # Optional renaming, gated by a checkbox
+    rename_on = st.checkbox("Manually rename columns", value=False)
+    rename_text = ""
+    if rename_on:
+        rename_text = st.text_area(
+            "Rename columns (old=new per line)",
+            height=110,
+            placeholder="email=primary_email\nCell=cell\nZIP=zip",
+            key="adv_renames"
+        )
 
+    # ----- PREVIEW of FINAL OUTPUT (per file) -----
     if files:
-        st.markdown("#### Preview & Column selection")
-        st.info("Pick **Columns to hash** for each file. If none are picked for a file, we’ll use your **Default columns** above (when present).")
-
-        for file in files[:12]:
+        st.markdown("#### Preview (shows final output structure)")
+        for file in files[:10]:
             df = load_df(file)
             if df is not None and not df.empty:
-                rows, cols = df.shape
+                if rename_on and rename_text.strip():
+                    # apply renames on a copy for preview
+                    df = df.rename(columns=parse_renames(rename_text))
+
+                # determine columns to hash for this file (intersection)
+                sel = [c for c in cols_to_hash if c in df.columns]
+                if not sel and len(df.columns) > 0:
+                    sel = [df.columns[0]]  # conservative fallback
+
+                # build preview output
+                if keep_mode.startswith("Keep & replace"):
+                    out_df = df.copy()
+                    for c in sel:
+                        series = out_df[c]
+                        to_hash = normalize_phone_series(series) if (adv_norm and looks_like_phone(series, c)) else series.astype(str).fillna("")
+                        out_df[c] = hash_series(to_hash, adv_hash)
+
+                elif keep_mode.startswith("Keep all & add"):
+                    out_df = df.copy()
+                    sfx = suffix or f"_{adv_hash}"
+                    for c in sel:
+                        series = out_df[c]
+                        to_hash = normalize_phone_series(series) if (adv_norm and looks_like_phone(series, c)) else series.astype(str).fillna("")
+                        out_df[f"{c}{sfx}"] = hash_series(to_hash, adv_hash)
+
+                else:  # Keep only hashed column(s)
+                    cols = {}
+                    for c in sel:
+                        series = df[c]
+                        to_hash = normalize_phone_series(series) if (adv_norm and looks_like_phone(series, c)) else series.astype(str).fillna("")
+                        cols[f"{c}_{adv_hash}"] = hash_series(to_hash, adv_hash)
+                    out_df = pd.DataFrame(cols)
+
                 st.markdown('<div class="card">', unsafe_allow_html=True)
-                st.markdown(f"**{file.name}**  ·  {human_int(rows)} rows × {cols} columns")
-
-                existing = st.session_state["colmap"].get(file.name)
-                if not existing:
-                    defaults_here = [c for c in st.session_state.get("adv_default_cols", []) if c in df.columns]
-                    existing = defaults_here if defaults_here else [df.columns[0]]
-
-                sel = st.multiselect(
-                    f"Columns to hash — {file.name}",
-                    options=list(df.columns),
-                    default=existing,
-                    key=f"adv-ms-{file.name}",
-                )
-                st.session_state["colmap"][file.name] = sel
-
-                c1, c2 = st.columns([3, 2])
-                with c1:
-                    st.dataframe(df.head(15), use_container_width=True, hide_index=True)
-                with c2:
-                    schema = pd.DataFrame({"column": df.columns, "dtype": [str(t) for t in df.dtypes]})
-                    st.dataframe(schema, use_container_width=True, hide_index=True)
+                st.markdown(f"**{file.name}** — previewing first 15 rows of the final output")
+                st.dataframe(out_df.head(15), use_container_width=True, hide_index=True)
                 st.markdown('</div>', unsafe_allow_html=True)
     else:
-        st.info("Upload files above to preview and pick columns.")
+        st.info("Upload files above, pick **Columns to hash**, then review the live preview here.")
 
     st.markdown("---")
     run = st.button("Run hashing", type="primary", use_container_width=True, key="adv_run")
@@ -423,13 +433,14 @@ with main_tab[1]:
         if not files:
             st.error("Upload at least one file.")
         else:
-            renames = parse_renames(rename_text)
             zipped_buf = io.BytesIO()
             zf = zipfile.ZipFile(zipped_buf, mode="w", compression=zipfile.ZIP_DEFLATED)
             st.session_state["outputs"].clear()
 
             total = len(files); valid = 0
             progress = st.progress(0.0, text="Processing...")
+
+            renames = parse_renames(rename_text) if (rename_on and rename_text.strip()) else {}
 
             for i, file in enumerate(files, start=1):
                 df = load_df(file)
@@ -438,31 +449,35 @@ with main_tab[1]:
                     progress.progress(i / total, text=f"Processed {i}/{total}")
                     continue
 
-                if renames: df = df.rename(columns=renames)
+                if renames:
+                    df = df.rename(columns=renames)
 
-                sel = st.session_state["colmap"].get(file.name, [])
-                sel = [c for c in sel if c in df.columns]
+                sel = [c for c in cols_to_hash if c in df.columns]
                 if not sel:
-                    defaults_here = [c for c in st.session_state.get("adv_default_cols", []) if c in df.columns]
-                    sel = defaults_here if defaults_here else [df.columns[0]]
+                    sel = [df.columns[0]]
 
-                keep_choice = st.session_state["adv_keepmode"]
-
-                if keep_choice.startswith("Keep & replace"):
+                if keep_mode.startswith("Keep & replace"):
+                    out_df = df.copy()
                     for c in sel:
-                        df[c] = hash_series(df[c], hash_type)
-                    out_df = df
+                        series = out_df[c]
+                        to_hash = normalize_phone_series(series) if (adv_norm and looks_like_phone(series, c)) else series.astype(str).fillna("")
+                        out_df[c] = hash_series(to_hash, adv_hash)
 
-                elif keep_choice.startswith("Keep all & add"):
-                    suffix = st.session_state["adv_suffix"] or f"_{hash_type}"
+                elif keep_mode.startswith("Keep all & add"):
+                    out_df = df.copy()
+                    sfx = suffix or f"_{adv_hash}"
                     for c in sel:
-                        out_col = f"{c}{suffix}"
-                        df[out_col] = hash_series(df[c], hash_type)
-                    out_df = df
+                        series = out_df[c]
+                        to_hash = normalize_phone_series(series) if (adv_norm and looks_like_phone(series, c)) else series.astype(str).fillna("")
+                        out_df[f"{c}{sfx}"] = hash_series(to_hash, adv_hash)
 
                 else:  # Keep only hashed column(s)
-                    tmp = {f"{c}_{hash_type}": hash_series(df[c], hash_type) for c in sel}
-                    out_df = pd.DataFrame(tmp)
+                    cols = {}
+                    for c in sel:
+                        series = df[c]
+                        to_hash = normalize_phone_series(series) if (adv_norm and looks_like_phone(series, c)) else series.astype(str).fillna("")
+                        cols[f"{c}_{adv_hash}"] = hash_series(to_hash, adv_hash)
+                    out_df = pd.DataFrame(cols)
 
                 csv_buf = io.StringIO()
                 out_df.to_csv(csv_buf, index=False)
@@ -512,7 +527,7 @@ with main_tab[1]:
 # ======================= COMBINE TAB (lean) ======================
 with main_tab[2]:
     st.subheader("Combine (optional)")
-    st.markdown("Merge multiple files into one. Useful when you truly need a single consolidated output.")
+    st.markdown("Merge multiple files into one. Defaults: **drop duplicate rows** ON, **source filename** OFF.")
 
     c_files = st.file_uploader(
         "Upload file(s) to combine",
@@ -520,12 +535,50 @@ with main_tab[2]:
         accept_multiple_files=True,
         key="combine_uploader"
     )
-    add_source = st.checkbox("Add source filename column", value=True, help="Adds a 'source_filename' column.")
     drop_dupes = st.checkbox("Drop duplicate rows", value=True)
+    add_source = st.checkbox("Add source filename column", value=False, help="Adds a 'source_filename' column.")
+
     c_fmt = st.selectbox("Output format", ["csv", "parquet"], index=0)
     c_name = st.text_input("Combined file name", value="combined_output.csv")
     if c_fmt == "parquet" and not c_name.lower().endswith(".parquet"):
         c_name = c_name.rsplit(".", 1)[0] + ".parquet"
+
+    def _coerce_to_single_hash(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Standardize a dataframe to a single 'hash' column when possible:
+        - If a 'hash' column exists and it’s the only column, keep it.
+        - If a 'hash' column exists with others, keep just that col (unless add_source is True).
+        - If exactly one column and it's unnamed/odd (e.g., 'Unnamed: 0'), rename to 'hash'.
+        - If multiple columns and none named 'hash', try the first non-empty column as 'hash'.
+        """
+        if add_source:
+            # When source column is included, keep structure as-is (we’ll only trim odd unnamed-only cases)
+            if "hash" in df.columns and df.shape[1] > 2:
+                return df[["hash"]].copy()
+            return df
+
+        # No source column -> try to output one clean 'hash' column
+        if "hash" in df.columns:
+            return df[["hash"]].copy()
+
+        # If exactly one column, rename to 'hash'
+        if df.shape[1] == 1:
+            df2 = df.copy()
+            df2.columns = ["hash"]
+            return df2
+
+        # Heuristic: drop fully empty columns; prefer first meaningful column
+        df2 = df.copy()
+        empty_cols = [c for c in df2.columns if df2[c].isna().all()]
+        df2 = df2.drop(columns=empty_cols) if empty_cols else df2
+
+        # If first column looks unnamed, still take it as hash
+        first = df2.columns[0]
+        if re.match(r"^Unnamed", str(first), flags=re.I):
+            return df2[[first]].rename(columns={first: "hash"})
+
+        # Fallback: take first column and call it 'hash'
+        return df2[[first]].rename(columns={first: "hash"})
 
     if st.button("Combine files", type="primary", key="combine_go"):
         if not c_files:
@@ -535,9 +588,14 @@ with main_tab[2]:
             for f in c_files:
                 df = load_df(f)
                 if df is not None and not df.empty:
+                    # Standardize to one 'hash' column unless source col requested
+                    df_std = _coerce_to_single_hash(df)
                     if add_source:
-                        df.insert(0, "source_filename", f.name)
-                    frames.append(df)
+                        # ensure 'source_filename' exists if requested
+                        if "source_filename" not in df_std.columns:
+                            df_std.insert(0, "source_filename", f.name)
+                    frames.append(df_std)
+
             if frames:
                 combined = pd.concat(frames, axis=0, ignore_index=True, sort=False)
                 if drop_dupes:
@@ -570,3 +628,4 @@ with main_tab[2]:
 
 # ================ FOOTER (company name at very bottom) ================
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
+
