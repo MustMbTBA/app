@@ -172,34 +172,61 @@ def human_int(n): return f"{n:,}"
 def load_df(file):
     """
     Robust reader for csv/tsv/txt/xlsx/parquet UploadedFile objects.
-    Adds an anti-over-split heuristic so single-column files don't get split
-    into 'E' and 'ail' (or similar) by mistaken delimiter detection.
+    Fix: collapse accidental multi-column splits (e.g., 'E' + 'ail') even when
+    the extra column is filled with strings like 'None', 'null', '', etc.
     """
     import pandas as pd
+    import numpy as np
+    import re
 
     name = (getattr(file, "name", "") or "").lower()
 
     def _rewind():
-        try: file.seek(0)
-        except Exception: pass
+        try:
+            file.seek(0)
+        except Exception:
+            pass
+
+    NULL_TOKENS = {"", "none", "null", "na", "n/a", "nan", "nil", "(null)", "-"}
+
+    def _effective_notnull_count(s: pd.Series) -> int:
+        # Normalize to string, trim, lower; turn empty-like tokens into NaN
+        s2 = s.astype(str).str.strip()
+        # blank/whitespace -> NaN
+        s2 = s2.replace(r"^\s*$", np.nan, regex=True)
+        # tokens -> NaN (case-insensitive)
+        s2 = s2.str.lower().replace(list(NULL_TOKENS), np.nan)
+        return s2.notna().sum()
 
     def _collapse_if_single_col_data(df: pd.DataFrame) -> pd.DataFrame:
+        """If only one column actually has data, collapse to that single column and
+        reconstruct a sensible header (e.g., 'E' + 'ail' -> 'Email')."""
         if df is None or df.shape[1] <= 1:
             return df
-        nn = df.notna().sum()
+
         rows = len(df)
         if rows == 0:
             return df
+
+        nn = df.apply(_effective_notnull_count)
         top_col = nn.idxmax()
-        top_ratio = nn.max() / max(rows, 1)
-        others_nonzero = (nn.drop(index=top_col) > 0).sum()
-        if top_ratio >= 0.9 and others_nonzero == 0:
+        top_cnt = nn.loc[top_col]
+        # other columns considered "non-empty" after null-like cleanup
+        others_nonzero = int((nn.drop(index=top_col) > max(1, int(0.01 * rows))).sum())
+        top_ratio = top_cnt / max(rows, 1)
+
+        # If ONE column has ≥90% of the non-empty values and others are effectively empty -> collapse
+        if top_ratio >= 0.90 and others_nonzero == 0:
+            # Try to rebuild a nice header by concatenating split pieces
             joined_name = "".join([str(c) for c in df.columns if str(c).strip()])
+            # Guardrail: if the join looks too weird/long, keep the populated column's name
             new_name = joined_name if 1 <= len(joined_name) <= 40 else str(top_col)
-            return pd.DataFrame({new_name: df[top_col]})
+            out = pd.DataFrame({new_name: df[top_col]})
+            return out
+
         return df
 
-    # Misnamed Excel (ZIP header)
+    # --- Misnamed Excel (ZIP magic) ---
     try:
         head = file.getvalue()[:4]
         if head.startswith(b"PK\x03\x04"):
@@ -209,18 +236,18 @@ def load_df(file):
     except Exception:
         pass
 
-    # Parquet
+    # --- Parquet ---
     if name.endswith(".parquet"):
         try:
-            _rewind(); df = pd.read_parquet(file, engine="pyarrow"); return df
+            _rewind(); return pd.read_parquet(file, engine="pyarrow")
         except Exception:
-            _rewind(); df = pd.read_parquet(file); return df
+            _rewind(); return pd.read_parquet(file)
 
-    # Excel
+    # --- Excel ---
     if name.endswith((".xlsx", ".xls")):
         _rewind(); df = pd.read_excel(file); return _collapse_if_single_col_data(df)
 
-    # Text-like attempts (auto-detect delimiter/encoding)
+    # --- Text-like: progressively lenient autodetects ---
     attempts = [
         dict(sep=None, engine="python", encoding="utf-8", on_bad_lines="skip"),
         dict(sep=None, engine="python", encoding="utf-8-sig", on_bad_lines="skip"),
@@ -235,13 +262,15 @@ def load_df(file):
         except Exception:
             pass
 
-    # Fixed delimiters + header/no header
+    # --- Fixed delimiters with/without header ---
     for sep in [",", ";", "\t", "|"]:
         for header in [0, None]:
             try:
                 _rewind()
-                df = pd.read_csv(file, sep=sep, engine="python", encoding="utf-8",
-                                 on_bad_lines="skip", header=header)
+                df = pd.read_csv(
+                    file, sep=sep, engine="python", encoding="utf-8",
+                    on_bad_lines="skip", header=header
+                )
                 if df is not None and df.shape[1] > 0:
                     if header is None:
                         df.columns = [f"col_{i+1}" for i in range(df.shape[1])]
@@ -253,6 +282,7 @@ def load_df(file):
     except Exception: pass
     st.warning(f"Could not read {getattr(file, 'name', 'file')}: unsupported format or empty content.")
     return None
+
 
 # Phone normalization helpers
 _digit_re = re.compile(r"\D+")
@@ -632,4 +662,5 @@ with main_tab[2]:
 
 # ================ FOOTER (company name at very bottom) ================
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
+
 
