@@ -159,15 +159,16 @@ def safe_base(name: str) -> str:
 def human_int(n): return f"{n:,}"
 
 # ---------- Robust file loader ----------
-def load_df(file):
+def load_df(file, force_single: bool = False):
     """
     Robust reader for csv/tsv/txt/xlsx/parquet UploadedFile objects.
     - Auto-infers delimiter & encoding for text files.
     - Resets stream between attempts.
     - Detects XLSX content even if extension says .csv.
     - Falls back to headerless read when needed.
+    - NEW: force_single=True -> read entire file as one column (header auto-detected).
     """
-    import pandas as pd
+    import pandas as pd, io
 
     name = (getattr(file, "name", "") or "").lower()
 
@@ -175,6 +176,40 @@ def load_df(file):
         try: file.seek(0)
         except Exception: pass
 
+    # ---------- NEW: Single-column hard mode ----------
+    if force_single:
+        # Read raw text with tolerant decoding
+        encodings = ["utf-8", "utf-8-sig", "latin1"]
+        text = None
+        for enc in encodings:
+            try:
+                _rewind()
+                text = file.getvalue().decode(enc, errors="replace")
+                break
+            except Exception:
+                continue
+        if text is None:
+            st.warning(f"Could not read {getattr(file, 'name', 'file')} as text.")
+            return None
+
+        lines = text.splitlines()
+        if not lines:
+            st.warning(f"{getattr(file,'name','file')} appears to be empty.")
+            return None
+
+        # Heuristic: if the first line contains common delimiters, it's likely data, not a header
+        first = lines[0]
+        has_delim = any(d in first for d in [",", ";", "\t", "|"])
+        if has_delim:
+            col_name = "col_1"
+            data = lines
+        else:
+            col_name = first.strip() or "col_1"
+            data = lines[1:]
+
+        return pd.DataFrame({col_name: data})
+
+    # ---------- Normal robust mode ----------
     # Misnamed Excel (ZIP header)
     try:
         head = file.getvalue()[:4]
@@ -226,6 +261,7 @@ def load_df(file):
     except Exception: pass
     st.warning(f"Could not read {getattr(file, 'name', 'file')}: unsupported format or empty content.")
     return None
+
 
 # Phone normalization helpers
 _digit_re = re.compile(r"\D+")
@@ -628,4 +664,5 @@ with main_tab[2]:
 
 # ================ FOOTER (company name at very bottom) ================
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
+
 
