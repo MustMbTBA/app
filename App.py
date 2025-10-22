@@ -141,7 +141,7 @@ st.markdown('</div></div>', unsafe_allow_html=True)
 
 # ================ APP TITLE =================
 st.title(TOOL_NAME)
-st.markdown('<div class="subtitle">Standard: minimal, one-column deduped hashes. Advanced: batch with flexible preview that shows final output.</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Standard: minimal, one-column deduped hashes. Advanced: batch with live, WYSIWYG preview.</div>', unsafe_allow_html=True)
 
 # ---------------- Utilities ----------------
 def parse_renames(txt: str):
@@ -166,7 +166,7 @@ def safe_base(name: str) -> str:
 
 def human_int(n): return f"{n:,}"
 
-# ---------- Robust file loader with Excel engines ----------
+# ---------- Robust file loader with strict Excel handling ----------
 def _collapse_if_single_col_data(df: pd.DataFrame) -> pd.DataFrame:
     """Reduce effectively single-column XLSX sheets to one clean column."""
     import re
@@ -180,7 +180,10 @@ def _collapse_if_single_col_data(df: pd.DataFrame) -> pd.DataFrame:
         return df
     non_empty_counts = df.notna().sum()
     top_col = non_empty_counts.idxmax()
-    if (non_empty_counts[top_col] > 0) and ((non_empty_counts[top_col] >= non_empty_counts.sum() * 0.8) or (non_empty_counts[top_col] >= len(df) * 0.9)):
+    if (non_empty_counts[top_col] > 0) and (
+        (non_empty_counts[top_col] >= non_empty_counts.sum() * 0.8)
+        or (non_empty_counts[top_col] >= len(df) * 0.9)
+    ):
         tmp = df[[top_col]].copy()
         if re.match(r"^Unnamed", str(top_col), flags=re.I):
             tmp = tmp.rename(columns={top_col: "col_1"})
@@ -190,12 +193,12 @@ def _collapse_if_single_col_data(df: pd.DataFrame) -> pd.DataFrame:
 def load_df(file):
     """
     Robust reader for csv/tsv/txt/xlsx/xls/xlsb/parquet from Streamlit UploadedFile.
-    - Excel: read from BytesIO, try engines (openpyxl/xlrd/pyxlsb/fallback).
-    - CSV: sniff delimiters & encodings, header/no-header.
-    - Detect misnamed Excel by ZIP magic.
+    - Excel: reads from BytesIO; tries installed engines only.
+    - CSV: sniff delimiters & encodings (no Excel->CSV fallback).
+    - Detect misnamed Excel via ZIP magic.
     - Collapses single-column Excel sheets.
     """
-    import pandas as pd, io
+    import pandas as pd, io, importlib.util
 
     name = (getattr(file, "name", "") or "").lower()
 
@@ -203,34 +206,44 @@ def load_df(file):
         try: file.seek(0)
         except Exception: pass
 
-    # Read a small header to detect ZIP (xlsx etc.)
+    def _mod_available(mod: str) -> bool:
+        return importlib.util.find_spec(mod) is not None
+
+    # Sniff first bytes (ZIP magic = likely xlsx)
     head = b""
     try:
         head = file.getvalue()[:4]
     except Exception:
         pass
 
-    # Parquet
+    # -------- Parquet --------
     if name.endswith(".parquet"):
         for eng in ("pyarrow", None):
             try:
-                _rewind(); return pd.read_parquet(file, engine=eng)
+                _rewind()
+                return pd.read_parquet(file, engine=eng)
             except Exception:
                 continue
 
-    # Excel helper
+    # -------- Excel helpers --------
     def _read_excel_from_bytes(bytes_data: bytes, ext_hint: str = ""):
         bio = io.BytesIO(bytes_data)
-        trials = []
+        engine_trials = []
+        # add engines ONLY if installed
         if ext_hint.endswith(".xlsx") or head.startswith(b"PK\x03\x04") or not ext_hint:
-            trials.append(("openpyxl", {}))
+            if _mod_available("openpyxl"):
+                engine_trials.append(("openpyxl", {}))
         if ext_hint.endswith(".xls"):
-            trials.append(("xlrd", {}))   # only works with xlrd<=1.2 for xls
+            if _mod_available("xlrd"):
+                engine_trials.append(("xlrd", {}))   # need xlrd==1.2.0 for .xls
         if ext_hint.endswith(".xlsb"):
-            trials.append(("pyxlsb", {}))
-        trials.append((None, {}))        # let pandas pick if anything is installed
+            if _mod_available("pyxlsb"):
+                engine_trials.append(("pyxlsb", {}))
 
-        for eng, kwargs in trials:
+        if not engine_trials:
+            return "__NO_EXCEL_ENGINE__"
+
+        for eng, kwargs in engine_trials:
             try:
                 bio.seek(0)
                 df = pd.read_excel(bio, engine=eng, **kwargs)
@@ -240,27 +253,30 @@ def load_df(file):
                 continue
         return None
 
-    # Misnamed Excel by ZIP magic
-    if head.startswith(b"PK\x03\x04"):
+    # -------- Excel by magic (misnamed .xlsx) or by extension --------
+    is_excel_by_magic = head.startswith(b"PK\x03\x04")
+    is_excel_by_ext = name.endswith((".xlsx", ".xls", ".xlsb"))
+
+    if is_excel_by_magic or is_excel_by_ext:
         try:
             _rewind()
             data = file.getvalue()
-            df = _read_excel_from_bytes(data, ext_hint=name)
-            if df is not None: return df
+            result = _read_excel_from_bytes(data, ext_hint=name)
+            if result == "__NO_EXCEL_ENGINE__":
+                st.error(
+                    "Excel file detected, but no Excel engine is installed. "
+                    "Please add **openpyxl** (for .xlsx) and optionally **xlrd==1.2.0** (.xls) or **pyxlsb** (.xlsb)."
+                )
+                return None
+            if result is None:
+                st.error("Excel file detected, but it could not be read with the available engines.")
+                return None
+            return result
         except Exception:
-            pass
+            st.error("Excel file detected, but an unexpected error occurred while reading it.")
+            return None
 
-    # Excel by extension
-    if name.endswith((".xlsx", ".xls", ".xlsb")):
-        try:
-            _rewind()
-            data = file.getvalue()
-            df = _read_excel_from_bytes(data, ext_hint=name)
-            if df is not None: return df
-        except Exception:
-            pass
-
-    # CSV/TSV/TXT/unknown
+    # -------- Text-like (csv/tsv/txt/unknown) --------
     attempts = [
         dict(sep=None, engine="python", encoding="utf-8", on_bad_lines="skip"),
         dict(sep=None, engine="python", encoding="utf-8-sig", on_bad_lines="skip"),
@@ -268,8 +284,10 @@ def load_df(file):
     ]
     for kw in attempts:
         try:
-            _rewind(); df = pd.read_csv(file, **kw)
-            if df is not None and df.shape[1] > 0: return df
+            _rewind()
+            df = pd.read_csv(file, **kw)
+            if df is not None and df.shape[1] > 0:
+                return df
         except Exception:
             pass
 
@@ -385,12 +403,11 @@ with main_tab[1]:
 
     st.markdown("#### Options")
 
-    # Global options (apply to each file; per-file pickers removed)
+    # Global options (apply to each file)
     oc1, oc2, oc3 = st.columns([1,1,1])
     with oc1:
         adv_hash = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="adv_hash_type")
     with oc2:
-        # Global 'Columns to hash' (intersected with each file's columns)
         all_cols = []
         if files:
             for f in files[:20]:
@@ -608,24 +625,18 @@ with main_tab[2]:
         Standardize a dataframe to a single 'hash' column when source column is OFF:
         - If 'hash' exists, keep just that.
         - If exactly one column, rename to 'hash'.
-        - If first column unnamed/odd (e.g., 'Unnamed: 0'), take it and rename to 'hash'.
+        - If first column unnamed/odd, take it and rename to 'hash'.
         - Else take first column and rename to 'hash'.
         """
         if add_source:
-            return df  # keep structure; source col will be inserted separately
-
+            return df
         if "hash" in df.columns:
             return df[["hash"]].copy()
-
         if df.shape[1] == 1:
-            df2 = df.copy()
-            df2.columns = ["hash"]
-            return df2
-
+            df2 = df.copy(); df2.columns = ["hash"]; return df2
         first = df.columns[0]
         if re.match(r"^Unnamed", str(first), flags=re.I):
             return df[[first]].rename(columns={first: "hash"})
-
         return df[[first]].rename(columns={first: "hash"})
 
     if st.button("Combine files", type="primary", key="combine_go"):
@@ -673,7 +684,3 @@ with main_tab[2]:
 
 # ================ FOOTER (company name at very bottom) ================
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
-
-
-
-
