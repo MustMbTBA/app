@@ -1,0 +1,6 @@
+pandas
+openpyxl          # Excel .xlsx
+pyarrow           # (recommended) Parquet read/write
+# Optional extras:
+xlrd==1.2.0     # legacy .xls support only with this pinned version
+pyxlsb          # .xlsb support
