@@ -116,8 +116,10 @@ st.markdown(
     }
     .stDownloadButton button:hover,.stButton button:hover{filter:brightness(1.06)}
     .stAlert{border-radius:14px}
+    .meta{color:var(--muted);font-size:.95rem;margin-top:.15rem}
+    .underline-accent{box-shadow:inset 0 -6px 0 var(--accent)}
 
-    /* Prevent 'E mail' header splits in tables */
+    /* --- Prevent column headers from splitting like 'E mail' --- */
     .stDataFrame table { letter-spacing: 0 !important; }
     .stDataFrame thead tr th div,
     .stDataFrame thead tr th span,
@@ -141,7 +143,7 @@ st.markdown('</div></div>', unsafe_allow_html=True)
 
 # ================ APP TITLE =================
 st.title(TOOL_NAME)
-st.markdown('<div class="subtitle">Standard: minimal, one-column deduped hashes. Advanced: batch with live, WYSIWYG preview.</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Standard: minimal, one-column deduped hashes. Advanced: batch with live preview of the final output.</div>', unsafe_allow_html=True)
 
 # ---------------- Utilities ----------------
 def parse_renames(txt: str):
@@ -157,8 +159,8 @@ def parse_renames(txt: str):
     return m
 
 def hash_series(s: pd.Series, algo: str) -> pd.Series:
-    f = {"md5": hashlib.md5, "sha1": hashlib.sha1, "sha256": hashlib.sha256, "sha512": hashlib.sha512}[algo]
-    return s.astype(str).fillna("").map(lambda x: f(x.encode("utf-8")).hexdigest())
+    fn = {"md5": hashlib.md5, "sha1": hashlib.sha1, "sha256": hashlib.sha256, "sha512": hashlib.sha512}[algo]
+    return s.astype(str).fillna("").map(lambda x: fn(x.encode("utf-8")).hexdigest())
 
 def safe_base(name: str) -> str:
     base = os.path.splitext(name)[0].strip()
@@ -166,39 +168,16 @@ def safe_base(name: str) -> str:
 
 def human_int(n): return f"{n:,}"
 
-# ---------- Robust file loader with strict Excel handling ----------
-def _collapse_if_single_col_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Reduce effectively single-column XLSX sheets to one clean column."""
-    import re
-    cols_all_na = [c for c in df.columns if df[c].isna().all()]
-    if cols_all_na:
-        df = df.drop(columns=cols_all_na)
-    if df.shape[1] == 1:
-        c = df.columns[0]
-        if re.match(r"^Unnamed", str(c), flags=re.I):
-            df = df.rename(columns={c: "col_1"})
-        return df
-    non_empty_counts = df.notna().sum()
-    top_col = non_empty_counts.idxmax()
-    if (non_empty_counts[top_col] > 0) and (
-        (non_empty_counts[top_col] >= non_empty_counts.sum() * 0.8)
-        or (non_empty_counts[top_col] >= len(df) * 0.9)
-    ):
-        tmp = df[[top_col]].copy()
-        if re.match(r"^Unnamed", str(top_col), flags=re.I):
-            tmp = tmp.rename(columns={top_col: "col_1"})
-        return tmp
-    return df
-
-def load_df(file):
+# ---------- Robust file loader (Excel + text + anti over-split) ----------
+def load_df(file, sheet: str | int | None = None):
     """
-    Robust reader for csv/tsv/txt/xlsx/xls/xlsb/parquet from Streamlit UploadedFile.
-    - Excel: reads from BytesIO; tries installed engines only.
-    - CSV: sniff delimiters & encodings (no Excel->CSV fallback).
-    - Detect misnamed Excel via ZIP magic.
-    - Collapses single-column Excel sheets.
+    Robust reader for csv/tsv/txt/xlsx/xls/xlsb/parquet.
+    - Excel: tries openpyxl (xlsx/xlsm), xlrd (xls), pyxlsb (xlsb), headerless recovery.
+    - Text: delimiter/encoding sniffing with headerless fallback.
+    - Detects misnamed .xlsx via ZIP header.
+    - Anti over-split: collapse to one column if only one has data.
     """
-    import pandas as pd, io, importlib.util
+    import pandas as pd, io
 
     name = (getattr(file, "name", "") or "").lower()
 
@@ -206,77 +185,67 @@ def load_df(file):
         try: file.seek(0)
         except Exception: pass
 
-    def _mod_available(mod: str) -> bool:
-        return importlib.util.find_spec(mod) is not None
+    def _collapse_if_single_col_data(df: pd.DataFrame) -> pd.DataFrame:
+        if df is None or df.shape[1] <= 1:
+            return df
+        rows = len(df)
+        if rows == 0: return df
+        nn = df.notna().sum()
+        top_col = nn.idxmax()
+        top_ratio = nn.max() / max(rows, 1)
+        others_nonzero = (nn.drop(index=top_col) > 0).sum()
+        if top_ratio >= 0.9 and others_nonzero == 0:
+            joined_name = "".join([str(c) for c in df.columns if str(c).strip()])
+            new_name = joined_name if 1 <= len(joined_name) <= 40 else str(top_col)
+            return pd.DataFrame({new_name: df[top_col]})
+        return df
 
-    # Sniff first bytes (ZIP magic = likely xlsx)
-    head = b""
     try:
         head = file.getvalue()[:4]
     except Exception:
-        pass
+        head = b""
+    is_zip_like = head.startswith(b"PK\x03\x04")
 
-    # -------- Parquet --------
+    # Parquet
     if name.endswith(".parquet"):
-        for eng in ("pyarrow", None):
-            try:
-                _rewind()
-                return pd.read_parquet(file, engine=eng)
-            except Exception:
-                continue
-
-    # -------- Excel helpers --------
-    def _read_excel_from_bytes(bytes_data: bytes, ext_hint: str = ""):
-        bio = io.BytesIO(bytes_data)
-        engine_trials = []
-        # add engines ONLY if installed
-        if ext_hint.endswith(".xlsx") or head.startswith(b"PK\x03\x04") or not ext_hint:
-            if _mod_available("openpyxl"):
-                engine_trials.append(("openpyxl", {}))
-        if ext_hint.endswith(".xls"):
-            if _mod_available("xlrd"):
-                engine_trials.append(("xlrd", {}))   # need xlrd==1.2.0 for .xls
-        if ext_hint.endswith(".xlsb"):
-            if _mod_available("pyxlsb"):
-                engine_trials.append(("pyxlsb", {}))
-
-        if not engine_trials:
-            return "__NO_EXCEL_ENGINE__"
-
-        for eng, kwargs in engine_trials:
-            try:
-                bio.seek(0)
-                df = pd.read_excel(bio, engine=eng, **kwargs)
-                if df is not None and df.shape[1] > 0:
-                    return _collapse_if_single_col_data(df)
-            except Exception:
-                continue
-        return None
-
-    # -------- Excel by magic (misnamed .xlsx) or by extension --------
-    is_excel_by_magic = head.startswith(b"PK\x03\x04")
-    is_excel_by_ext = name.endswith((".xlsx", ".xls", ".xlsb"))
-
-    if is_excel_by_magic or is_excel_by_ext:
         try:
-            _rewind()
-            data = file.getvalue()
-            result = _read_excel_from_bytes(data, ext_hint=name)
-            if result == "__NO_EXCEL_ENGINE__":
-                st.error(
-                    "Excel file detected, but no Excel engine is installed. "
-                    "Please add **openpyxl** (for .xlsx) and optionally **xlrd==1.2.0** (.xls) or **pyxlsb** (.xlsb)."
-                )
-                return None
-            if result is None:
-                st.error("Excel file detected, but it could not be read with the available engines.")
-                return None
-            return result
+            _rewind(); return pd.read_parquet(file, engine="pyarrow")
         except Exception:
-            st.error("Excel file detected, but an unexpected error occurred while reading it.")
-            return None
+            _rewind(); return pd.read_parquet(file)
 
-    # -------- Text-like (csv/tsv/txt/unknown) --------
+    # Excel (or misnamed Excel)
+    if name.endswith((".xlsx", ".xls", ".xlsb", ".xlsm")) or is_zip_like:
+        _rewind()
+        data = io.BytesIO(file.read())
+        # openpyxl
+        try:
+            return pd.read_excel(data, sheet_name=(sheet if sheet is not None else 0), engine="openpyxl")
+        except Exception:
+            pass
+        # xlrd
+        try:
+            data.seek(0)
+            return pd.read_excel(data, sheet_name=(sheet if sheet is not None else 0), engine="xlrd")
+        except Exception:
+            pass
+        # pyxlsb
+        try:
+            data.seek(0)
+            return pd.read_excel(data, sheet_name=(sheet if sheet is not None else 0), engine="pyxlsb")
+        except Exception:
+            pass
+        # headerless recovery
+        try:
+            data.seek(0)
+            df = pd.read_excel(data, sheet_name=(sheet if sheet is not None else 0), engine="openpyxl", header=None)
+            if df is not None and df.shape[1] > 0:
+                df.columns = [f"col_{i+1}" for i in range(df.shape[1])]
+                return df
+        except Exception:
+            pass
+        # fall through to text handling
+
+    # Text-like
     attempts = [
         dict(sep=None, engine="python", encoding="utf-8", on_bad_lines="skip"),
         dict(sep=None, engine="python", encoding="utf-8-sig", on_bad_lines="skip"),
@@ -287,7 +256,7 @@ def load_df(file):
             _rewind()
             df = pd.read_csv(file, **kw)
             if df is not None and df.shape[1] > 0:
-                return df
+                return _collapse_if_single_col_data(df)
         except Exception:
             pass
 
@@ -295,27 +264,53 @@ def load_df(file):
         for header in [0, None]:
             try:
                 _rewind()
-                df = pd.read_csv(file, sep=sep, engine="python", encoding="utf-8", on_bad_lines="skip", header=header)
+                df = pd.read_csv(file, sep=sep, engine="python", encoding="utf-8",
+                                 on_bad_lines="skip", header=header)
                 if df is not None and df.shape[1] > 0:
                     if header is None:
                         df.columns = [f"col_{i+1}" for i in range(df.shape[1])]
-                    return df
+                    return _collapse_if_single_col_data(df)
             except Exception:
                 continue
 
     _rewind()
-    st.warning(f"Could not read {getattr(file, 'name', 'file')}: unsupported or empty.")
+    st.warning(f"Could not read {getattr(file, 'name', 'file')}: unsupported or corrupted content.")
     return None
+
+# ----- Excel sheet picker (cached per file) -----
+if "sheets_map" not in st.session_state:
+    st.session_state["sheets_map"] = {}  # {file_name: selected_sheet}
+
+def pick_sheet(uploaded_file):
+    import pandas as pd, io
+    try:
+        uploaded_file.seek(0)
+        bio = io.BytesIO(uploaded_file.read())
+        xls = pd.ExcelFile(bio, engine="openpyxl")
+        if len(xls.sheet_names) > 1:
+            default = st.session_state["sheets_map"].get(uploaded_file.name, xls.sheet_names[0])
+            choice = st.selectbox(
+                f"Sheet — {uploaded_file.name}",
+                options=xls.sheet_names,
+                index=xls.sheet_names.index(default) if default in xls.sheet_names else 0,
+                key=f"sheet-{uploaded_file.name}"
+            )
+            st.session_state["sheets_map"][uploaded_file.name] = choice
+            return choice
+        # one sheet
+        st.session_state["sheets_map"][uploaded_file.name] = xls.sheet_names[0]
+        return xls.sheet_names[0]
+    except Exception:
+        # not an xlsx/xlsm or engine failed; let loader handle it
+        return None
 
 # Phone normalization helpers
 _digit_re = re.compile(r"\D+")
 def normalize_phone_value(x: str) -> str:
     if x is None: return ""
     d = _digit_re.sub("", str(x))
-    if len(d) == 11 and d.startswith("1"):
-        d = d[1:]
-    if len(d) == 10:
-        return d
+    if len(d) == 11 and d.startswith("1"): d = d[1:]
+    if len(d) == 10: return d
     return ""
 
 def normalize_phone_series(s: pd.Series) -> pd.Series:
@@ -335,9 +330,9 @@ main_tab = st.tabs(["Standard", "Advanced", "Combine"])
 # ======================= STANDARD TAB ======================
 with main_tab[0]:
     st.subheader("Standard")
-    st.markdown("One-step hashing with minimal choices. Output is a **single `hash` column**, **deduplicated**.")
+    st.markdown("One-step hashing. Output is a **single `hash` column**, **deduplicated**.")
 
-    std_file = st.file_uploader("Upload a file", type=["csv", "tsv", "txt", "xlsx", "xls", "parquet"], key="std_uploader")
+    std_file = st.file_uploader("Upload a file", type=["csv", "tsv", "txt", "xlsx", "xls", "xlsb", "parquet"], key="std_uploader")
     c1, c2 = st.columns([1,1])
     with c1:
         std_hash = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="std_hash")
@@ -349,14 +344,14 @@ with main_tab[0]:
         )
 
     if std_file:
-        df0 = load_df(std_file)
+        sheet = pick_sheet(std_file)
+        df0 = load_df(std_file, sheet=sheet)
         if df0 is not None and not df0.empty:
             col = st.selectbox("Column to hash", options=list(df0.columns), index=0, key="std_col")
 
             st.markdown('<div class="card">', unsafe_allow_html=True)
-            rows, cols = df0.shape
-            st.caption(f"Preview shape: {rows:,} × {cols}")
-            st.markdown(f"**{std_file.name}** — showing first 10 rows")
+            r, c = df0.shape
+            st.caption(f"Preview shape: {r:,} × {c}")
             st.dataframe(df0.head(10), use_container_width=True, hide_index=True)
 
             if st.button("Hash now", type="primary", key="std_go"):
@@ -364,18 +359,15 @@ with main_tab[0]:
                 apply_norm = std_norm and looks_like_phone(src, col)
                 if std_norm and not apply_norm:
                     st.info("Column does not look like a phone field — skipping normalization.")
-
                 to_hash = normalize_phone_series(src) if apply_norm else src.astype(str).fillna("")
                 hashed = hash_series(to_hash, std_hash)
-
                 result = pd.DataFrame({"hash": hashed}).drop_duplicates().reset_index(drop=True)
 
                 st.markdown("</div>", unsafe_allow_html=True)
                 st.markdown("### Result (first 10 unique hashes)")
                 st.dataframe(result.head(10), use_container_width=True, hide_index=True)
 
-                csv_buf = io.StringIO()
-                result.to_csv(csv_buf, index=False)
+                csv_buf = io.StringIO(); result.to_csv(csv_buf, index=False)
                 st.download_button(
                     "Download hashes (CSV)",
                     data=csv_buf.getvalue().encode("utf-8"),
@@ -393,7 +385,7 @@ with main_tab[1]:
     # Upload at top
     files = st.file_uploader(
         "Upload file(s)",
-        type=["csv", "tsv", "txt", "xlsx", "xls", "parquet"],
+        type=["csv", "tsv", "txt", "xlsx", "xls", "xlsb", "parquet"],
         accept_multiple_files=True,
         key="adv_uploader"
     )
@@ -403,15 +395,16 @@ with main_tab[1]:
 
     st.markdown("#### Options")
 
-    # Global options (apply to each file)
     oc1, oc2, oc3 = st.columns([1,1,1])
     with oc1:
         adv_hash = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="adv_hash_type")
     with oc2:
+        # Global 'Columns to hash' (we intersect with each file's columns)
         all_cols = []
         if files:
             for f in files[:20]:
-                df_tmp = load_df(f)
+                sheet = pick_sheet(f)
+                df_tmp = load_df(f, sheet=sheet)
                 if df_tmp is not None and not df_tmp.empty:
                     all_cols.extend(list(df_tmp.columns))
         all_cols = sorted(pd.Index(all_cols).unique().tolist()) if all_cols else []
@@ -433,7 +426,7 @@ with main_tab[1]:
     adv_norm = st.checkbox(
         "Normalize to 10-digit phones (auto-detect per selected column)",
         value=True,
-        help="If a selected column appears to be phone-like, values are normalized before hashing."
+        help="If selected column appears phone-like, values are normalized before hashing."
     )
 
     keep_mode = st.radio(
@@ -448,6 +441,7 @@ with main_tab[1]:
         key="adv_keepmode"
     )
 
+    # Optional renaming, gated by a checkbox
     rename_on = st.checkbox("Manually rename columns", value=False)
     rename_text = ""
     if rename_on:
@@ -462,7 +456,8 @@ with main_tab[1]:
     if files:
         st.markdown("#### Preview (shows final output structure)")
         for file in files[:10]:
-            df = load_df(file)
+            sheet = st.session_state["sheets_map"].get(file.name) or pick_sheet(file)
+            df = load_df(file, sheet=sheet)
             if df is not None and not df.empty:
                 if rename_on and rename_text.strip():
                     df = df.rename(columns=parse_renames(rename_text))
@@ -495,13 +490,12 @@ with main_tab[1]:
                     out_df = pd.DataFrame(cols)
 
                 st.markdown('<div class="card">', unsafe_allow_html=True)
-                rows, cols = out_df.shape
-                st.caption(f"Preview shape: {rows:,} × {cols}")
-                st.markdown(f"**{file.name}** — previewing first 15 rows of the final output")
+                r, ccount = out_df.shape
+                st.caption(f"{file.name} — previewing first 15 rows · shape: {r:,} × {ccount}")
                 st.dataframe(out_df.head(15), use_container_width=True, hide_index=True)
                 st.markdown('</div>', unsafe_allow_html=True)
     else:
-        st.info("Upload files above, pick **Columns to hash**, then review the live preview here.")
+        st.info("Upload files above, choose **Columns to hash**, then review the live preview here.")
 
     st.markdown("---")
     run = st.button("Run hashing", type="primary", use_container_width=True, key="adv_run")
@@ -520,7 +514,8 @@ with main_tab[1]:
             renames = parse_renames(rename_text) if (rename_on and rename_text.strip()) else {}
 
             for i, file in enumerate(files, start=1):
-                df = load_df(file)
+                sheet = st.session_state["sheets_map"].get(file.name) or pick_sheet(file)
+                df = load_df(file, sheet=sheet)
                 if df is None or df.empty:
                     st.warning(f"Skipped {file.name}: unsupported or empty.")
                     progress.progress(i / total, text=f"Processed {i}/{total}")
@@ -556,8 +551,7 @@ with main_tab[1]:
                         cols[f"{c}_{adv_hash}"] = hash_series(to_hash, adv_hash)
                     out_df = pd.DataFrame(cols)
 
-                csv_buf = io.StringIO()
-                out_df.to_csv(csv_buf, index=False)
+                csv_buf = io.StringIO(); out_df.to_csv(csv_buf, index=False)
                 data_bytes = csv_buf.getvalue().encode("utf-8")
                 out_name = f"{safe_base(file.name)}_hashed.csv"
                 zf.writestr(out_name, data_bytes)
@@ -608,7 +602,7 @@ with main_tab[2]:
 
     c_files = st.file_uploader(
         "Upload file(s) to combine",
-        type=["csv", "tsv", "txt", "xlsx", "xls", "parquet"],
+        type=["csv", "tsv", "txt", "xlsx", "xls", "xlsb", "parquet"],
         accept_multiple_files=True,
         key="combine_uploader"
     )
@@ -622,22 +616,19 @@ with main_tab[2]:
 
     def _coerce_to_single_hash(df: pd.DataFrame) -> pd.DataFrame:
         """
-        Standardize a dataframe to a single 'hash' column when source column is OFF:
-        - If 'hash' exists, keep just that.
-        - If exactly one column, rename to 'hash'.
-        - If first column unnamed/odd, take it and rename to 'hash'.
-        - Else take first column and rename to 'hash'.
+        Standardize a dataframe to a single 'hash' column when possible.
+        If multiple columns exist and none named 'hash', take first non-empty column as 'hash'.
         """
         if add_source:
-            return df
+            return df  # keep original structure when we include source column
         if "hash" in df.columns:
             return df[["hash"]].copy()
         if df.shape[1] == 1:
-            df2 = df.copy(); df2.columns = ["hash"]; return df2
-        first = df.columns[0]
-        if re.match(r"^Unnamed", str(first), flags=re.I):
-            return df[[first]].rename(columns={first: "hash"})
-        return df[[first]].rename(columns={first: "hash"})
+            d2 = df.copy(); d2.columns = ["hash"]; return d2
+        # drop all-empty cols then pick first
+        d2 = df.drop(columns=[c for c in df.columns if df[c].isna().all()], errors="ignore")
+        first = d2.columns[0]
+        return d2[[first]].rename(columns={first: "hash"})
 
     if st.button("Combine files", type="primary", key="combine_go"):
         if not c_files:
@@ -645,7 +636,9 @@ with main_tab[2]:
         else:
             frames = []
             for f in c_files:
-                df = load_df(f)
+                # Try to reuse sheet selection if user already chose for same filename in other tabs
+                sheet = st.session_state["sheets_map"].get(f.name) or pick_sheet(f)
+                df = load_df(f, sheet=sheet)
                 if df is not None and not df.empty:
                     df_std = _coerce_to_single_hash(df)
                     if add_source and "source_filename" not in df_std.columns:
@@ -658,19 +651,15 @@ with main_tab[2]:
                     combined = combined.drop_duplicates()
 
                 if c_fmt == "csv":
-                    buf = io.StringIO()
-                    combined.to_csv(buf, index=False)
-                    data = buf.getvalue().encode("utf-8")
-                    mime = "text/csv"
+                    buf = io.StringIO(); combined.to_csv(buf, index=False)
+                    data = buf.getvalue().encode("utf-8"); mime = "text/csv"
                 else:
                     pbuf = io.BytesIO()
                     try:
                         combined.to_parquet(pbuf, engine="pyarrow", index=False)
                     except Exception:
                         combined.to_parquet(pbuf, index=False)
-                    pbuf.seek(0)
-                    data = pbuf.getvalue()
-                    mime = "application/octet-stream"
+                    pbuf.seek(0); data = pbuf.getvalue(); mime = "application/octet-stream"
 
                 st.download_button(
                     f"Download {c_name}",
