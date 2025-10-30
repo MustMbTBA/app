@@ -143,7 +143,7 @@ st.markdown('</div></div>', unsafe_allow_html=True)
 
 # ================ APP TITLE =================
 st.title(TOOL_NAME)
-st.markdown('<div class="subtitle">Standard: minimal, one-column deduped hashes. Advanced: batch with live preview of the final output.</div>', unsafe_allow_html=True)
+st.markdown('<div class="subtitle">Standard: minimal, one-column deduped hashes. Advanced: batch with per-file column selection and live output preview.</div>', unsafe_allow_html=True)
 
 # ---------------- Utilities ----------------
 def parse_renames(txt: str):
@@ -392,29 +392,12 @@ with main_tab[1]:
 
     if "outputs" not in st.session_state: st.session_state["outputs"] = {}
     if "zip_bytes" not in st.session_state: st.session_state["zip_bytes"] = None
+    if "perfile_cols" not in st.session_state: st.session_state["perfile_cols"] = {}  # {filename: [cols]}
 
     st.markdown("#### Options")
-
-    oc1, oc2, oc3 = st.columns([1,1,1])
+    oc1, oc3 = st.columns([1,1])
     with oc1:
         adv_hash = st.selectbox("Hash type", ["md5", "sha1", "sha256", "sha512"], index=0, key="adv_hash_type")
-    with oc2:
-        # Global 'Columns to hash' (we intersect with each file's columns)
-        all_cols = []
-        if files:
-            for f in files[:20]:
-                sheet = pick_sheet(f)
-                df_tmp = load_df(f, sheet=sheet)
-                if df_tmp is not None and not df_tmp.empty:
-                    all_cols.extend(list(df_tmp.columns))
-        all_cols = sorted(pd.Index(all_cols).unique().tolist()) if all_cols else []
-        cols_to_hash = st.multiselect(
-            "Columns to hash",
-            options=all_cols,
-            default=all_cols[:1] if all_cols else [],
-            help="These columns will be hashed in each file if present.",
-            key="adv_cols_to_hash"
-        )
     with oc3:
         suffix = st.text_input(
             "Suffix for added hash columns (Add mode)",
@@ -452,50 +435,64 @@ with main_tab[1]:
             key="adv_renames"
         )
 
-    # ----- PREVIEW of FINAL OUTPUT (per file) -----
+    # ----- PREVIEW (per-file column selection + live final output) -----
     if files:
-        st.markdown("#### Preview (shows final output structure)")
-        for file in files[:10]:
+        st.markdown("#### Preview & Column Selection (per file)")
+        for file in files[:15]:
             sheet = st.session_state["sheets_map"].get(file.name) or pick_sheet(file)
             df = load_df(file, sheet=sheet)
-            if df is not None and not df.empty:
-                if rename_on and rename_text.strip():
-                    df = df.rename(columns=parse_renames(rename_text))
+            if df is None or df.empty:
+                st.warning(f"Skipped {file.name}: unreadable or empty.")
+                continue
 
-                sel = [c for c in cols_to_hash if c in df.columns]
-                if not sel and len(df.columns) > 0:
-                    sel = [df.columns[0]]
+            # apply renames for preview if enabled
+            if rename_on and rename_text.strip():
+                df = df.rename(columns=parse_renames(rename_text))
 
-                if keep_mode.startswith("Keep & replace"):
-                    out_df = df.copy()
-                    for c in sel:
-                        series = out_df[c]
-                        to_hash = normalize_phone_series(series) if (adv_norm and looks_like_phone(series, c)) else series.astype(str).fillna("")
-                        out_df[c] = hash_series(to_hash, adv_hash)
+            # per-file selection
+            default_cols = st.session_state["perfile_cols"].get(file.name) or ([df.columns[0]] if len(df.columns) else [])
+            sel = st.multiselect(
+                f"Columns to hash — {file.name}",
+                options=list(df.columns),
+                default=default_cols,
+                key=f"pick-{file.name}"
+            )
+            st.session_state["perfile_cols"][file.name] = sel
 
-                elif keep_mode.startswith("Keep all & add"):
-                    out_df = df.copy()
-                    sfx = suffix or f"_{adv_hash}"
-                    for c in sel:
-                        series = out_df[c]
-                        to_hash = normalize_phone_series(series) if (adv_norm and looks_like_phone(series, c)) else series.astype(str).fillna("")
-                        out_df[f"{c}{sfx}"] = hash_series(to_hash, adv_hash)
+            # compute preview of final output based on selection + keep mode
+            if not sel and len(df.columns) > 0:
+                sel = [df.columns[0]]
 
-                else:  # Keep only hashed column(s)
-                    cols = {}
-                    for c in sel:
-                        series = df[c]
-                        to_hash = normalize_phone_series(series) if (adv_norm and looks_like_phone(series, c)) else series.astype(str).fillna("")
-                        cols[f"{c}_{adv_hash}"] = hash_series(to_hash, adv_hash)
-                    out_df = pd.DataFrame(cols)
+            if keep_mode.startswith("Keep & replace"):
+                out_df = df.copy()
+                for c in sel:
+                    series = out_df[c]
+                    to_hash = normalize_phone_series(series) if (adv_norm and looks_like_phone(series, c)) else series.astype(str).fillna("")
+                    out_df[c] = hash_series(to_hash, adv_hash)
 
-                st.markdown('<div class="card">', unsafe_allow_html=True)
-                r, ccount = out_df.shape
-                st.caption(f"{file.name} — previewing first 15 rows · shape: {r:,} × {ccount}")
-                st.dataframe(out_df.head(15), use_container_width=True, hide_index=True)
-                st.markdown('</div>', unsafe_allow_html=True)
+            elif keep_mode.startswith("Keep all & add"):
+                out_df = df.copy()
+                sfx = suffix or f"_{adv_hash}"
+                for c in sel:
+                    series = out_df[c]
+                    to_hash = normalize_phone_series(series) if (adv_norm and looks_like_phone(series, c)) else series.astype(str).fillna("")
+                    out_df[f"{c}{sfx}"] = hash_series(to_hash, adv_hash)
+
+            else:  # Keep only hashed column(s)
+                cols = {}
+                for c in sel:
+                    series = df[c]
+                    to_hash = normalize_phone_series(series) if (adv_norm and looks_like_phone(series, c)) else series.astype(str).fillna("")
+                    cols[f"{c}_{adv_hash}"] = hash_series(to_hash, adv_hash)
+                out_df = pd.DataFrame(cols)
+
+            st.markdown('<div class="card">', unsafe_allow_html=True)
+            r, ccount = out_df.shape
+            st.caption(f"{file.name} — previewing first 15 rows · shape: {r:,} × {ccount}")
+            st.dataframe(out_df.head(15), use_container_width=True, hide_index=True)
+            st.markdown('</div>', unsafe_allow_html=True)
     else:
-        st.info("Upload files above, choose **Columns to hash**, then review the live preview here.")
+        st.info("Upload files above, then select columns **per file** and preview the final outputs here.")
 
     st.markdown("---")
     run = st.button("Run hashing", type="primary", use_container_width=True, key="adv_run")
@@ -524,8 +521,9 @@ with main_tab[1]:
                 if renames:
                     df = df.rename(columns=renames)
 
-                sel = [c for c in cols_to_hash if c in df.columns]
-                if not sel:
+                sel = st.session_state["perfile_cols"].get(file.name, [])
+                sel = [c for c in sel if c in df.columns]
+                if not sel and len(df.columns):
                     sel = [df.columns[0]]
 
                 if keep_mode.startswith("Keep & replace"):
@@ -593,7 +591,7 @@ with main_tab[1]:
                     use_container_width=True,
                 )
     else:
-        st.info("Nothing to download yet—run hashing above once you’ve set options and previews.")
+        st.info("Nothing to download yet—run hashing above once you’ve set selections and previews.")
 
 # ======================= COMBINE TAB (lean) ======================
 with main_tab[2]:
