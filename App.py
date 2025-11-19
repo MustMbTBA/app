@@ -8,7 +8,7 @@ import re
 
 COMPANY_NAME = "True Blue Analytics"
 TOOL_NAME = "Easy Hasher"
-LOGO_PATH = r"IMG/signal-2025-11-05-141944.png"
+LOGO_PATH = r"IMG/signal-2025-11-05-141904.png"
 
 st.set_page_config(page_title=f"{TOOL_NAME} • {COMPANY_NAME}", page_icon=None, layout="wide")
 
@@ -541,6 +541,7 @@ with main_tab[2]:
                 st.error("No valid, non-empty files to combine.")
 
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
+
 
 
 
