@@ -39,21 +39,14 @@ st.markdown(
         letter-spacing:.1px;
     }
 
-    /* SIDE BLUE RAIL */
-    .siderail{
-        position:fixed;
-        top:0; bottom:0; left:0;
-        width:8px;               /* thickness of the line */
-        background:
-          linear-gradient(180deg, #141d49 0%, #1b2470 60%, #141d49 100%);
-        box-shadow: 0 0 18px rgba(20,29,73,.35);
-        z-index:1000;
-        pointer-events:none;
+    /* SIDE BLUE RAILS (BIGGER + BOTH SIDES) */
+    .siderail-left, .siderail-right{
+        position:fixed; top:0; bottom:0; width:16px; z-index:1000; pointer-events:none;
+        background:linear-gradient(180deg, #141d49 0%, #1b2470 60%, #141d49 100%);
+        box-shadow: 0 0 22px rgba(20,29,73,.40);
     }
-    /* small offset so the sticky brandbar doesn’t hide it visually */
-    @media (min-width: 768px){
-      .siderail{ left: 0; }
-    }
+    .siderail-left{ left:0; }
+    .siderail-right{ right:0; }
 
     /* Subtle dot-grid overlay */
     .dotgrid:before{
@@ -65,7 +58,7 @@ st.markdown(
 
     .block-container{padding:0 1.25rem 2rem 1.25rem; max-width:1200px}
 
-    /* Brandbar with corner wave + animated stripe */
+    /* Brandbar with animated stripe */
     .brandbar{
         position:sticky; top:0; z-index:999; background:#fff; border-bottom:1px solid var(--line);
         margin:0 -1.25rem 0.9rem -1.25rem; padding:.35rem 0 .0rem 0;
@@ -168,8 +161,9 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# SIDE BLUE RAIL + dot grid overlay
-st.markdown("<div class='siderail'></div>", unsafe_allow_html=True)
+# SIDE BLUE RAILS + dot grid overlay
+st.markdown("<div class='siderail-left'></div>", unsafe_allow_html=True)
+st.markdown("<div class='siderail-right'></div>", unsafe_allow_html=True)
 st.markdown("<div class='dotgrid'></div>", unsafe_allow_html=True)
 
 # ---------- BRAND BAR ----------
@@ -691,8 +685,6 @@ with main_tab[2]:
 
 # ---------- FOOTER ----------
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
-
-
 
 
 
