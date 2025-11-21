@@ -17,10 +17,19 @@ st.markdown(
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
     :root{
-        --bg1:#eff4ff; --bg2:#eaf1ff; --panel:#ffffff; --ink:#061d4c; --muted:#6e7b99; --line:#d9e2ff;
-        --brand:#061d4c; --brand-2:#061d4c; --brand-3:#061d4c; --accent:#b7c8ff; --focus:#3aa0ff;
-        --input-bg:#ffffff; --input-text:#061d4c; --placeholder:#8fa1c0; --input-border:#b9c8ef;
-        --ring:0 0 0 3px rgba(6,29,76,.28);
+        --bg1:#eff4ff; --bg2:#eaf1ff; --panel:#ffffff;
+        --ink:#141d49;            /* main text color (updated) */
+        --muted:#6e7b99; --line:#d9e2ff;
+
+        /* brand colors (updated) */
+        --brand:#141d49; --brand-2:#141d49; --brand-3:#141d49;
+
+        --accent:#b7c8ff; --focus:#3aa0ff;
+
+        --input-bg:#ffffff; --input-text:#141d49;  /* inputs use main color */
+        --placeholder:#8fa1c0; --input-border:#b9c8ef;
+
+        --ring:0 0 0 3px rgba(20,29,73,.28);       /* ring tinted to new brand */
     }
     *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
     html,body,[data-testid="stAppViewContainer"]{
@@ -31,18 +40,27 @@ st.markdown(
     }
     .block-container{padding:0 1.25rem 2rem 1.25rem;max-width:1200px}
     [data-testid="stSidebar"]{background:var(--panel);border-right:1px solid var(--line);padding-top:.75rem}
-    .brandbar{position:sticky; top:0; z-index:999; background:#fff; border-bottom:1px solid var(--line);
-              margin:0 -1.25rem .9rem -1.25rem; padding:.35rem 0;}
+
+    .brandbar{
+        position:sticky; top:0; z-index:999; background:#fff; border-bottom:1px solid var(--line);
+        margin:0 -1.25rem .9rem -1.25rem; padding:.35rem 0;
+    }
     .brandwrap{display:flex; align-items:center; gap:10px; max-width:1200px; margin:0 auto; padding:0 1.25rem; justify-content:flex-start;}
     .brandlogo{max-height:46px;}
-    .footer{background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 60%,var(--brand-3) 100%);
-            color:#fff; margin:2rem -1.25rem 0 -1.25rem; border-top:1px solid var(--line);}
+
+    .footer{
+        background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 60%,var(--brand-3) 100%);
+        color:#fff; margin:2rem -1.25rem 0 -1.25rem; border-top:1px solid var(--line);
+    }
     .footerwrap{ max-width:1200px; margin:0 auto; padding:.9rem 1.25rem; font-weight:800; letter-spacing:.3px; }
+
     h1,h2,h3,h4,h5{ color:var(--ink); margin:0 0 .25rem 0; font-weight:700 }
     h1{font-size:2.0rem;line-height:1.16;margin-top:.25rem}
     h2{font-size:1.35rem;line-height:1.28;margin-top:.25rem}
     .subtitle{color:var(--muted);font-size:1.02rem;margin:.25rem 0 1rem 0;font-weight:500}
+
     label{color:var(--ink)!important;font-weight:600!important}
+
     input,textarea,select{
         font-size:16px!important;color:var(--input-text)!important;
         font-family:"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important
@@ -53,28 +71,33 @@ st.markdown(
     }
     .stTextInput input::placeholder,.stTextArea textarea::placeholder{color:var(--placeholder)!important}
     .stTextInput input:focus,.stTextArea textarea:focus{box-shadow:var(--ring)!important;border-color:var(--brand-3)!important;outline:none!important}
+
     .stSelectbox div[data-baseweb="select"]>div{
         background:var(--input-bg)!important;color:var(--input-text)!important;border:1px solid var(--input-border)!important;
         border-radius:14px!important;min-height:48px!important;padding:4px 8px!important;
         font-family:"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important
     }
+
     [data-testid="stRadio"] [role="radiogroup"] label{border-radius:12px;padding:.35rem .6rem;font-weight:600!important}
-    [data-testid="stRadio"] [role="radiogroup"] label:hover{background:rgba(6,29,76,.08)}
+    [data-testid="stRadio"] [role="radiogroup"] label:hover{background:rgba(20,29,73,.08)}
     [data-testid="stRadio"] [role="radiogroup"] input:focus+div{box-shadow:var(--ring);border-radius:12px}
+
     .stTabs [data-baseweb="tab-list"]{gap:.5rem;margin-bottom:.75rem}
     .stTabs [data-baseweb="tab"]{
         background:#e6ecff;border:1px solid var(--line);border-bottom:2px solid transparent;border-radius:12px 12px 0 0;
         padding:.68rem 1rem;color:var(--ink);font-weight:650;
     }
     .stTabs [aria-selected="true"]{background:#ffffff;border-bottom:4px solid var(--brand-2)}
+
     .card{
-        background:linear-gradient(180deg,#ffffff, #f5f7ff);
+        background:linear-gradient(180deg,#ffffff,#f5f7ff);
         border:1px solid var(--line);
         border-radius:18px;
         padding:1rem 1rem 1.1rem 1rem;
-        box-shadow:0 14px 30px rgba(6,29,76,.08);
+        box-shadow:0 14px 30px rgba(20,29,73,.08);
         margin-bottom:.9rem
     }
+
     .stDownloadButton button,.stButton button{
         background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 60%,var(--brand-3) 100%)!important;color:#ffffff!important;border:none!important;border-radius:14px!important;
         padding:.85rem 1rem!important;font-weight:700!important;letter-spacing:.2px
@@ -83,6 +106,8 @@ st.markdown(
     .stAlert{border-radius:14px}
     .meta{color:var(--muted);font-size:.95rem;margin-top:.15rem}
     .underline-accent{box-shadow:inset 0 -6px 0 var(--accent)}
+
+    /* Prevent 'E mail' header wraps */
     .stDataFrame table { letter-spacing: 0 !important; }
     .stDataFrame thead tr th div,
     .stDataFrame thead tr th span,
@@ -341,6 +366,7 @@ with main_tab[1]:
     files = st.file_uploader("Upload file(s)", type=["csv","tsv","txt","xlsx","xls","xlsb","parquet"], accept_multiple_files=True, key="adv_uploader")
     if "outputs" not in st.session_state: st.session_state["outputs"] = {}
     if "zip_bytes" not in st.session_state: st.session_state["zip_bytes"] = None
+
     st.markdown("#### Options")
     oc1, oc2, oc3 = st.columns([1,1,1])
     with oc1:
@@ -357,7 +383,9 @@ with main_tab[1]:
         cols_to_hash = st.multiselect("Columns to hash", options=all_cols, default=all_cols[:1] if all_cols else [], key="adv_cols_to_hash")
     with oc3:
         suffix = st.text_input("Suffix for added hash columns (Add mode)", value=f"_{adv_hash}", key="adv_suffix")
+
     adv_norm = st.checkbox("Normalize to 10-digit phones (auto-detect per selected column)", value=True)
+
     keep_mode = st.radio(
         "Columns to keep in output",
         [
@@ -368,10 +396,12 @@ with main_tab[1]:
         index=1,
         key="adv_keepmode"
     )
+
     rename_on = st.checkbox("Manually rename columns", value=False)
     rename_text = ""
     if rename_on:
         rename_text = st.text_area("Rename columns (old=new per line)", height=110, placeholder="email=primary_email\nCell=cell\nZIP=zip", key="adv_renames")
+
     if files:
         st.markdown("#### Preview (shows final output structure)")
         for file in files[:10]:
@@ -383,23 +413,27 @@ with main_tab[1]:
                 sel = [c for c in cols_to_hash if c in df.columns]
                 if not sel and len(df.columns) > 0:
                     sel = [df.columns[0]]
+
                 if keep_mode.startswith("Keep & replace"):
                     out_df = df.copy()
                     for c in sel:
                         to_hash = series_for_hash(out_df[c], adv_norm, c)
                         out_df[c] = hash_series(to_hash, adv_hash)
+
                 elif keep_mode.startswith("Keep all & add"):
                     out_df = df.copy()
                     sfx = suffix or f"_{adv_hash}"
                     for c in sel:
                         to_hash = series_for_hash(out_df[c], adv_norm, c)
                         out_df[f"{c}{sfx}"] = hash_series(to_hash, adv_hash)
+
                 else:
                     cols = {}
                     for c in sel:
                         to_hash = series_for_hash(df[c], adv_norm, c)
                         cols[f"{c}_{adv_hash}"] = hash_series(to_hash, adv_hash)
                     out_df = pd.DataFrame(cols)
+
                 st.markdown('<div class="card">', unsafe_allow_html=True)
                 r, ccount = out_df.shape
                 st.caption(f"{file.name} — previewing first 15 rows · shape: {r:,} × {ccount}")
@@ -407,6 +441,7 @@ with main_tab[1]:
                 st.markdown('</div>', unsafe_allow_html=True)
     else:
         st.info("Upload files above, choose Columns to hash, then review the live preview here.")
+
     st.markdown("---")
     run = st.button("Run hashing", type="primary", use_container_width=True, key="adv_run")
     if run:
@@ -419,6 +454,7 @@ with main_tab[1]:
             total = len(files); valid = 0
             progress = st.progress(0.0, text="Processing...")
             renames = parse_renames(rename_text) if (rename_on and rename_text.strip()) else {}
+
             for i, file in enumerate(files, start=1):
                 sheet = st.session_state["sheets_map"].get(file.name) or pick_sheet(file)
                 df = load_df(file, sheet=sheet)
@@ -426,35 +462,43 @@ with main_tab[1]:
                     st.warning(f"Skipped {file.name}: unsupported or empty.")
                     progress.progress(i / total, text=f"Processed {i}/{total}")
                     continue
+
                 if renames:
                     df = df.rename(columns=renames)
+
                 sel = [c for c in cols_to_hash if c in df.columns]
                 if not sel:
                     sel = [df.columns[0]]
+
                 if keep_mode.startswith("Keep & replace"):
                     out_df = df.copy()
                     for c in sel:
                         to_hash = series_for_hash(out_df[c], adv_norm, c)
                         out_df[c] = hash_series(to_hash, adv_hash)
+
                 elif keep_mode.startswith("Keep all & add"):
                     out_df = df.copy()
                     sfx = suffix or f"_{adv_hash}"
                     for c in sel:
                         to_hash = series_for_hash(out_df[c], adv_norm, c)
                         out_df[f"{c}{sfx}"] = hash_series(to_hash, adv_hash)
+
                 else:
                     cols = {}
                     for c in sel:
                         to_hash = series_for_hash(df[c], adv_norm, c)
                         cols[f"{c}_{adv_hash}"] = hash_series(to_hash, adv_hash)
                     out_df = pd.DataFrame(cols)
+
                 csv_buf = io.StringIO(); out_df.to_csv(csv_buf, index=False)
                 data_bytes = csv_buf.getvalue().encode("utf-8")
                 out_name = f"{safe_base(file.name)}_hashed.csv"
                 zf.writestr(out_name, data_bytes)
                 st.session_state["outputs"][out_name] = data_bytes
+
                 valid += 1
                 progress.progress(i / total, text=f"Processed {i}/{total}")
+
             zf.close()
             zipped_buf.seek(0)
             if st.session_state["outputs"]:
@@ -462,6 +506,7 @@ with main_tab[1]:
                 st.success(f"Finished {valid} file(s). Scroll down to download.")
             else:
                 st.error("No outputs produced. Check column names and try again.")
+
     st.markdown("### Downloads")
     if st.session_state.get("outputs"):
         left, right = st.columns([2, 1])
@@ -499,6 +544,7 @@ with main_tab[2]:
     c_name = st.text_input("Combined file name", value="combined_output.csv")
     if c_fmt == "parquet" and not c_name.lower().endswith(".parquet"):
         c_name = c_name.rsplit(".", 1)[0] + ".parquet"
+
     def _coerce_to_single_hash(df: pd.DataFrame) -> pd.DataFrame:
         if add_source:
             return df
@@ -509,6 +555,7 @@ with main_tab[2]:
         d2 = df.drop(columns=[c for c in df.columns if df[c].isna().all()], errors="ignore")
         first = d2.columns[0]
         return d2[[first]].rename(columns={first: "hash"})
+
     if st.button("Combine files", type="primary", key="combine_go"):
         if not c_files:
             st.error("Upload at least two files.")
@@ -522,10 +569,12 @@ with main_tab[2]:
                     if add_source and "source_filename" not in df_std.columns:
                         df_std.insert(0, "source_filename", f.name)
                     frames.append(df_std)
+
             if frames:
                 combined = pd.concat(frames, axis=0, ignore_index=True, sort=False)
                 if drop_dupes:
                     combined = combined.drop_duplicates()
+
                 if c_fmt == "csv":
                     buf = io.StringIO(); combined.to_csv(buf, index=False)
                     data = buf.getvalue().encode("utf-8"); mime = "text/csv"
@@ -536,7 +585,14 @@ with main_tab[2]:
                     except Exception:
                         combined.to_parquet(pbuf, index=False)
                     pbuf.seek(0); data = pbuf.getvalue(); mime = "application/octet-stream"
-                st.download_button(f"Download {c_name}", data=data, file_name=c_name, mime=mime, type="primary")
+
+                st.download_button(
+                    f"Download {c_name}",
+                    data=data,
+                    file_name=c_name,
+                    mime=mime,
+                    type="primary",
+                )
             else:
                 st.error("No valid, non-empty files to combine.")
 
