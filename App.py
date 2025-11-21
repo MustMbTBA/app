@@ -39,6 +39,22 @@ st.markdown(
         letter-spacing:.1px;
     }
 
+    /* SIDE BLUE RAIL */
+    .siderail{
+        position:fixed;
+        top:0; bottom:0; left:0;
+        width:8px;               /* thickness of the line */
+        background:
+          linear-gradient(180deg, #141d49 0%, #1b2470 60%, #141d49 100%);
+        box-shadow: 0 0 18px rgba(20,29,73,.35);
+        z-index:1000;
+        pointer-events:none;
+    }
+    /* small offset so the sticky brandbar doesn’t hide it visually */
+    @media (min-width: 768px){
+      .siderail{ left: 0; }
+    }
+
     /* Subtle dot-grid overlay */
     .dotgrid:before{
         content:""; position:fixed; inset:0; z-index:-1; opacity:.22; pointer-events:none;
@@ -152,7 +168,8 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Dot-grid overlay container
+# SIDE BLUE RAIL + dot grid overlay
+st.markdown("<div class='siderail'></div>", unsafe_allow_html=True)
 st.markdown("<div class='dotgrid'></div>", unsafe_allow_html=True)
 
 # ---------- BRAND BAR ----------
@@ -239,7 +256,7 @@ def load_df(file, sheet: str | int | None = None):
         except Exception: pass
     def _collapse_if_single_col_data(df: pd.DataFrame) -> pd.DataFrame:
         if df is None or df.shape[1] <= 1: return df
-        rows = len(df)
+        rows = len(df); 
         if rows == 0: return df
         nn = df.notna().sum()
         top_col = nn.idxmax()
@@ -674,6 +691,7 @@ with main_tab[2]:
 
 # ---------- FOOTER ----------
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
+
 
 
 
