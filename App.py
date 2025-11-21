@@ -6,121 +6,156 @@ import pandas as pd
 import streamlit as st
 import re
 
+# ---------- BRAND ----------
 COMPANY_NAME = "True Blue Analytics"
 TOOL_NAME = "Easy Hasher"
-LOGO_PATH = r"IMG/signal-2025-11-05-141904.png"
+LOGO_PATH = r"IMG/signal-2025-11-05-141904.png"  # banner left corner
 
 st.set_page_config(page_title=f"{TOOL_NAME} • {COMPANY_NAME}", page_icon=None, layout="wide")
 
+# ---------- THEME + DESIGNS ----------
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+
     :root{
         --bg1:#eff4ff; --bg2:#eaf1ff; --panel:#ffffff;
-        --ink:#141d49;            /* main text color (updated) */
-        --muted:#6e7b99; --line:#d9e2ff;
-
-        /* brand colors (updated) */
+        --ink:#141d49; --muted:#6e7b99; --line:#d9e2ff;
         --brand:#141d49; --brand-2:#141d49; --brand-3:#141d49;
-
         --accent:#b7c8ff; --focus:#3aa0ff;
-
-        --input-bg:#ffffff; --input-text:#141d49;  /* inputs use main color */
-        --placeholder:#8fa1c0; --input-border:#b9c8ef;
-
-        --ring:0 0 0 3px rgba(20,29,73,.28);       /* ring tinted to new brand */
+        --input-bg:#ffffff; --input-text:#141d49; --placeholder:#8fa1c0; --input-border:#b9c8ef;
+        --ring:0 0 0 3px rgba(20,29,73,.28);
     }
-    *{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+
+    *{ -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale }
     html,body,[data-testid="stAppViewContainer"]{
-        background:linear-gradient(180deg,var(--bg1),var(--bg2));
+        background:
+          radial-gradient(1200px 800px at 90% -10%, rgba(20,29,73,.08) 0%, rgba(20,29,73,0) 60%),
+          radial-gradient(900px 600px at -10% 10%, rgba(20,29,73,.06) 0%, rgba(20,29,73,0) 55%),
+          linear-gradient(180deg,var(--bg1),var(--bg2));
         color:var(--ink);
         font-family:"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
         letter-spacing:.1px;
     }
-    .block-container{padding:0 1.25rem 2rem 1.25rem;max-width:1200px}
-    [data-testid="stSidebar"]{background:var(--panel);border-right:1px solid var(--line);padding-top:.75rem}
 
+    /* Subtle dot-grid overlay */
+    .dotgrid:before{
+        content:""; position:fixed; inset:0; z-index:-1; opacity:.22; pointer-events:none;
+        background-image: radial-gradient(rgba(20,29,73,.12) 1px, transparent 1px);
+        background-size: 18px 18px;
+        mask-image: linear-gradient(to bottom, rgba(0,0,0,.8), rgba(0,0,0,0));
+    }
+
+    .block-container{padding:0 1.25rem 2rem 1.25rem; max-width:1200px}
+
+    /* Brandbar with corner wave + animated stripe */
     .brandbar{
         position:sticky; top:0; z-index:999; background:#fff; border-bottom:1px solid var(--line);
-        margin:0 -1.25rem .9rem -1.25rem; padding:.35rem 0;
+        margin:0 -1.25rem 0.9rem -1.25rem; padding:.35rem 0 .0rem 0;
+        overflow:hidden;
     }
-    .brandwrap{display:flex; align-items:center; gap:10px; max-width:1200px; margin:0 auto; padding:0 1.25rem; justify-content:flex-start;}
+    .brandwrap{display:flex; align-items:center; gap:12px; max-width:1200px; margin:0 auto; padding:0 1.25rem; justify-content:flex-start;}
     .brandlogo{max-height:46px;}
+    .brandbar:after{
+        content:""; display:block; height:3px; width:120%;
+        background:linear-gradient(90deg, rgba(20,29,73,.0), rgba(20,29,73,.35), rgba(20,29,73,.9), rgba(20,29,73,.35), rgba(20,29,73,.0));
+        animation: slideStripe 6s linear infinite;
+        transform: translateX(-10%);
+    }
+    @keyframes slideStripe { 0%{transform:translateX(-10%);} 100%{transform:translateX(-30%);} }
+
+    /* Hero section */
+    .hero{
+        display:flex; gap:16px; align-items:center; justify-content:space-between;
+        background:linear-gradient(180deg,#ffffff,#f5f7ff);
+        border:1px solid var(--line); border-radius:18px; padding:16px 18px;
+        box-shadow:0 14px 30px rgba(20,29,73,.08); margin-bottom:12px;
+        position:relative; overflow:hidden;
+    }
+    .hero:before{
+        content:""; position:absolute; right:-80px; top:-80px; width:260px; height:260px; border-radius:50%;
+        background: radial-gradient(closest-side, rgba(20,29,73,.08), transparent 65%);
+    }
+    .hero .left{display:flex; align-items:center; gap:14px;}
+    .hero .right .badges{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
+    .badge{
+        display:inline-flex; align-items:center; gap:6px;
+        padding:.32rem .6rem; border-radius:999px; border:1px solid #dbe3ff; background:#eef2ff; color:var(--ink);
+        font-size:.82rem; font-weight:600;
+    }
+
+    /* Tabs + cards */
+    .stTabs [data-baseweb="tab-list"]{gap:.5rem; margin:.5rem 0 .75rem}
+    .stTabs [data-baseweb="tab"]{
+        background:#eef2ff; border:1px solid var(--line); border-bottom:2px solid transparent; border-radius:12px 12px 0 0;
+        padding:.68rem 1rem; color:var(--ink); font-weight:650;
+    }
+    .stTabs [aria-selected="true"]{background:#ffffff; border-bottom:4px solid var(--brand-2)}
+    .card{
+        background:linear-gradient(180deg,#ffffff, #f5f7ff);
+        border:1px solid var(--line); border-radius:18px; padding:1rem 1rem 1.1rem 1rem;
+        box-shadow:0 14px 30px rgba(20,29,73,.08); margin-bottom:.9rem
+    }
+
+    /* Inputs */
+    label{color:var(--ink)!important; font-weight:600!important}
+    input,textarea,select{
+        font-size:16px!important; color:var(--input-text)!important; font-family:"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important;
+    }
+    .stTextInput input,.stTextArea textarea{
+        background:var(--input-bg)!important; color:var(--input-text)!important; border:1px solid var(--input-border)!important; border-radius:14px!important;
+        box-shadow:none!important; padding:.7rem .9rem!important
+    }
+    .stTextInput input::placeholder,.stTextArea textarea::placeholder{color:var(--placeholder)!important}
+    .stTextInput input:focus,.stTextArea textarea:focus{box-shadow:var(--ring)!important; border-color:var(--brand-3)!important; outline:none!important}
+    .stSelectbox div[data-baseweb="select"]>div{
+        background:var(--input-bg)!important; color:var(--input-text)!important; border:1px solid var(--input-border)!important;
+        border-radius:14px!important; min-height:48px!important; padding:4px 8px!important;
+        font-family:"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important
+    }
+    [data-testid="stRadio"] [role="radiogroup"] label{border-radius:12px; padding:.35rem .6rem; font-weight:600!important}
+    [data-testid="stRadio"] [role="radiogroup"] label:hover{background:rgba(20,29,73,.08)}
+    [data-testid="stRadio"] [role="radiogroup"] input:focus+div{box-shadow:var(--ring); border-radius:12px}
+
+    /* Buttons */
+    .stDownloadButton button,.stButton button{
+        background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 60%,var(--brand-3) 100%)!important;
+        color:#ffffff!important; border:none!important; border-radius:14px!important;
+        padding:.85rem 1rem!important; font-weight:700!important; letter-spacing:.2px
+    }
+    .stDownloadButton button:hover,.stButton button:hover{filter:brightness(1.06)}
+
+    /* Gradient divider line */
+    .gradline{height:2px; width:100%; margin:.5rem 0 1rem 0;
+      background:linear-gradient(90deg, transparent, rgba(20,29,73,.65), transparent);
+      border-radius:2px;}
+
+    /* Tiny feature chips row */
+    .chips{display:flex; flex-wrap:wrap; gap:8px; margin:.25rem 0 .6rem 0}
+    .chip{font-size:.78rem; background:#f2f5ff; border:1px solid #dbe3ff; color:var(--ink); padding:.2rem .5rem; border-radius:10px; font-weight:600}
+
+    /* Prevent header breaks (E mail) */
+    .stDataFrame table { letter-spacing: 0 !important; }
+    .stDataFrame thead tr th div, .stDataFrame thead tr th span,
+    [data-testid="stDataFrame"] [data-testid="columnHeaderName"]{
+        white-space:nowrap!important; word-break:keep-all!important; hyphens:none!important;
+    }
 
     .footer{
         background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 60%,var(--brand-3) 100%);
         color:#fff; margin:2rem -1.25rem 0 -1.25rem; border-top:1px solid var(--line);
     }
     .footerwrap{ max-width:1200px; margin:0 auto; padding:.9rem 1.25rem; font-weight:800; letter-spacing:.3px; }
-
-    h1,h2,h3,h4,h5{ color:var(--ink); margin:0 0 .25rem 0; font-weight:700 }
-    h1{font-size:2.0rem;line-height:1.16;margin-top:.25rem}
-    h2{font-size:1.35rem;line-height:1.28;margin-top:.25rem}
-    .subtitle{color:var(--muted);font-size:1.02rem;margin:.25rem 0 1rem 0;font-weight:500}
-
-    label{color:var(--ink)!important;font-weight:600!important}
-
-    input,textarea,select{
-        font-size:16px!important;color:var(--input-text)!important;
-        font-family:"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important
-    }
-    .stTextInput input,.stTextArea textarea{
-        background:var(--input-bg)!important;color:var(--input-text)!important;border:1px solid var(--input-border)!important;border-radius:14px!important;
-        box-shadow:none!important;padding:.7rem .9rem!important
-    }
-    .stTextInput input::placeholder,.stTextArea textarea::placeholder{color:var(--placeholder)!important}
-    .stTextInput input:focus,.stTextArea textarea:focus{box-shadow:var(--ring)!important;border-color:var(--brand-3)!important;outline:none!important}
-
-    .stSelectbox div[data-baseweb="select"]>div{
-        background:var(--input-bg)!important;color:var(--input-text)!important;border:1px solid var(--input-border)!important;
-        border-radius:14px!important;min-height:48px!important;padding:4px 8px!important;
-        font-family:"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important
-    }
-
-    [data-testid="stRadio"] [role="radiogroup"] label{border-radius:12px;padding:.35rem .6rem;font-weight:600!important}
-    [data-testid="stRadio"] [role="radiogroup"] label:hover{background:rgba(20,29,73,.08)}
-    [data-testid="stRadio"] [role="radiogroup"] input:focus+div{box-shadow:var(--ring);border-radius:12px}
-
-    .stTabs [data-baseweb="tab-list"]{gap:.5rem;margin-bottom:.75rem}
-    .stTabs [data-baseweb="tab"]{
-        background:#e6ecff;border:1px solid var(--line);border-bottom:2px solid transparent;border-radius:12px 12px 0 0;
-        padding:.68rem 1rem;color:var(--ink);font-weight:650;
-    }
-    .stTabs [aria-selected="true"]{background:#ffffff;border-bottom:4px solid var(--brand-2)}
-
-    .card{
-        background:linear-gradient(180deg,#ffffff,#f5f7ff);
-        border:1px solid var(--line);
-        border-radius:18px;
-        padding:1rem 1rem 1.1rem 1rem;
-        box-shadow:0 14px 30px rgba(20,29,73,.08);
-        margin-bottom:.9rem
-    }
-
-    .stDownloadButton button,.stButton button{
-        background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 60%,var(--brand-3) 100%)!important;color:#ffffff!important;border:none!important;border-radius:14px!important;
-        padding:.85rem 1rem!important;font-weight:700!important;letter-spacing:.2px
-    }
-    .stDownloadButton button:hover,.stButton button:hover{filter:brightness(1.06)}
-    .stAlert{border-radius:14px}
-    .meta{color:var(--muted);font-size:.95rem;margin-top:.15rem}
-    .underline-accent{box-shadow:inset 0 -6px 0 var(--accent)}
-
-    /* Prevent 'E mail' header wraps */
-    .stDataFrame table { letter-spacing: 0 !important; }
-    .stDataFrame thead tr th div,
-    .stDataFrame thead tr th span,
-    [data-testid="stDataFrame"] [data-testid="columnHeaderName"] {
-      white-space: nowrap !important;
-      word-break: keep-all !important;
-      hyphens: none !important;
-    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
+# Dot-grid overlay container
+st.markdown("<div class='dotgrid'></div>", unsafe_allow_html=True)
+
+# ---------- BRAND BAR ----------
 st.markdown('<div class="brandbar"><div class="brandwrap">', unsafe_allow_html=True)
 try:
     st.image(LOGO_PATH, use_container_width=False, caption=None, output_format="PNG")
@@ -128,9 +163,54 @@ except Exception:
     st.write("")
 st.markdown('</div></div>', unsafe_allow_html=True)
 
-st.title(TOOL_NAME)
-st.markdown('<div class="subtitle">Standard: minimal, one-column deduped hashes. Advanced: batch with live output preview.</div>', unsafe_allow_html=True)
+# ---------- HERO ----------
+col_hero_l, col_hero_r = st.columns([1.25, 1])
+with col_hero_l:
+    st.markdown(
+        f"""
+        <div class="hero">
+            <div class="left">
+                <div>
+                    <h1 style="margin:.1rem 0 .15rem 0;">{TOOL_NAME}</h1>
+                    <div class="chips">
+                        <div class="chip">MD5 / SHA-1 / SHA-256 / SHA-512</div>
+                        <div class="chip">Phone 10-digit normalize</div>
+                        <div class="chip">Live preview</div>
+                        <div class="chip">Combine & dedupe</div>
+                    </div>
+                    <div class="subtitle" style="margin-top:.25rem;">
+                        Hash emails or phones in seconds. Clean, preview, and export — built for scale and clarity.
+                    </div>
+                </div>
+            </div>
+            <div class="right">
+                <div class="badges">
+                    <span class="badge">⚡ Fast</span>
+                    <span class="badge">🔒 Local hashing</span>
+                    <span class="badge">🧩 Flexible I/O</span>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+with col_hero_r:
+    st.markdown(
+        """
+        <div class="card">
+          <h2 style="margin-bottom:.4rem;">How it works</h2>
+          <div class="gradline"></div>
+          <ol style="margin:.3rem 0 0 1rem; padding:0; line-height:1.45;">
+            <li>Upload CSV / Excel / Parquet</li>
+            <li>Select column(s), choose hash & options</li>
+            <li>Preview output and download</li>
+          </ol>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
+# ---------- HELPERS / LOGIC ----------
 def parse_renames(txt: str):
     m = {}
     for line in txt.splitlines():
@@ -150,8 +230,6 @@ def hash_series(s: pd.Series, algo: str) -> pd.Series:
 def safe_base(name: str) -> str:
     base = os.path.splitext(name)[0].strip()
     return base if base else "file"
-
-def human_int(n): return f"{n:,}"
 
 def load_df(file, sheet: str | int | None = None):
     import pandas as pd, io
@@ -296,6 +374,7 @@ def pick_sheet(uploaded_file):
     except Exception:
         return None
 
+# ---------- PHONE NORMALIZATION ----------
 _digit_re = re.compile(r"\D+")
 
 def normalize_phone_value(x):
@@ -323,17 +402,22 @@ def series_for_hash(series: pd.Series, normalize_enabled: bool, colname: str) ->
     n = s.map(normalize_phone_value)
     return n.mask(n.eq(""), s)
 
+# ---------- APP ----------
 main_tab = st.tabs(["Standard", "Advanced", "Combine"])
 
+# ----- STANDARD -----
 with main_tab[0]:
     st.subheader("Standard")
     st.markdown("One-step hashing. Output is a **single `hash` column**, **deduplicated**.")
+    st.markdown("<div class='gradline'></div>", unsafe_allow_html=True)
+
     std_file = st.file_uploader("Upload a file", type=["csv","tsv","txt","xlsx","xls","xlsb","parquet"], key="std_uploader")
     c1, c2 = st.columns([1,1])
     with c1:
         std_hash = st.selectbox("Hash type", ["md5","sha1","sha256","sha512"], index=0, key="std_hash")
     with c2:
         std_norm = st.checkbox("Normalize to 10-digit phones (auto-detect)", value=True)
+
     if std_file:
         sheet = pick_sheet(std_file)
         df0 = load_df(std_file, sheet=sheet)
@@ -361,8 +445,11 @@ with main_tab[0]:
         else:
             st.warning("Could not read the file or it is empty.")
 
+# ----- ADVANCED -----
 with main_tab[1]:
     st.subheader("Advanced")
+    st.markdown("<div class='gradline'></div>", unsafe_allow_html=True)
+
     files = st.file_uploader("Upload file(s)", type=["csv","tsv","txt","xlsx","xls","xlsb","parquet"], accept_multiple_files=True, key="adv_uploader")
     if "outputs" not in st.session_state: st.session_state["outputs"] = {}
     if "zip_bytes" not in st.session_state: st.session_state["zip_bytes"] = None
@@ -419,14 +506,12 @@ with main_tab[1]:
                     for c in sel:
                         to_hash = series_for_hash(out_df[c], adv_norm, c)
                         out_df[c] = hash_series(to_hash, adv_hash)
-
                 elif keep_mode.startswith("Keep all & add"):
                     out_df = df.copy()
                     sfx = suffix or f"_{adv_hash}"
                     for c in sel:
                         to_hash = series_for_hash(out_df[c], adv_norm, c)
                         out_df[f"{c}{sfx}"] = hash_series(to_hash, adv_hash)
-
                 else:
                     cols = {}
                     for c in sel:
@@ -462,7 +547,6 @@ with main_tab[1]:
                     st.warning(f"Skipped {file.name}: unsupported or empty.")
                     progress.progress(i / total, text=f"Processed {i}/{total}")
                     continue
-
                 if renames:
                     df = df.rename(columns=renames)
 
@@ -475,14 +559,12 @@ with main_tab[1]:
                     for c in sel:
                         to_hash = series_for_hash(out_df[c], adv_norm, c)
                         out_df[c] = hash_series(to_hash, adv_hash)
-
                 elif keep_mode.startswith("Keep all & add"):
                     out_df = df.copy()
                     sfx = suffix or f"_{adv_hash}"
                     for c in sel:
                         to_hash = series_for_hash(out_df[c], adv_norm, c)
                         out_df[f"{c}{sfx}"] = hash_series(to_hash, adv_hash)
-
                 else:
                     cols = {}
                     for c in sel:
@@ -534,8 +616,11 @@ with main_tab[1]:
     else:
         st.info("Nothing to download yet—run hashing above once you’ve set options and previews.")
 
+# ----- COMBINE -----
 with main_tab[2]:
     st.subheader("Combine (optional)")
+    st.markdown("<div class='gradline'></div>", unsafe_allow_html=True)
+
     st.markdown("Merge multiple files into one. Defaults: **drop duplicate rows** ON, **source filename** OFF.")
     c_files = st.file_uploader("Upload file(s) to combine", type=["csv","tsv","txt","xlsx","xls","xlsb","parquet"], accept_multiple_files=True, key="combine_uploader")
     drop_dupes = st.checkbox("Drop duplicate rows", value=True)
@@ -569,12 +654,10 @@ with main_tab[2]:
                     if add_source and "source_filename" not in df_std.columns:
                         df_std.insert(0, "source_filename", f.name)
                     frames.append(df_std)
-
             if frames:
                 combined = pd.concat(frames, axis=0, ignore_index=True, sort=False)
                 if drop_dupes:
                     combined = combined.drop_duplicates()
-
                 if c_fmt == "csv":
                     buf = io.StringIO(); combined.to_csv(buf, index=False)
                     data = buf.getvalue().encode("utf-8"); mime = "text/csv"
@@ -585,19 +668,12 @@ with main_tab[2]:
                     except Exception:
                         combined.to_parquet(pbuf, index=False)
                     pbuf.seek(0); data = pbuf.getvalue(); mime = "application/octet-stream"
-
-                st.download_button(
-                    f"Download {c_name}",
-                    data=data,
-                    file_name=c_name,
-                    mime=mime,
-                    type="primary",
-                )
+                st.download_button(f"Download {c_name}", data=data, file_name=c_name, mime=mime, type="primary")
             else:
                 st.error("No valid, non-empty files to combine.")
 
+# ---------- FOOTER ----------
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
-
 
 
 
