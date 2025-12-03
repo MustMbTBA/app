@@ -9,7 +9,7 @@ import re
 # ---------- BRAND ----------
 COMPANY_NAME = "True Blue Analytics"
 TOOL_NAME = "Easy Hasher"
-LOGO_PATH = r"IMG/signal-2025-11-05-141904.png"
+LOGO_PATH = r"IMG/true_blue_analytics_transparent.png"
 
 st.set_page_config(page_title=f"{TOOL_NAME} • {COMPANY_NAME}", page_icon=None, layout="wide")
 
@@ -662,6 +662,7 @@ with main_tab[2]:
 
 # ---------- FOOTER ----------
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
+
 
 
 
