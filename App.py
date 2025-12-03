@@ -6,14 +6,12 @@ import pandas as pd
 import streamlit as st
 import re
 
-# ---------- BRAND ----------
 COMPANY_NAME = "True Blue Analytics"
 TOOL_NAME = "Easy Hasher"
-LOGO_PATH = r"IMG/signal-2025-11-05-141904.png"  # banner left corner
+LOGO_PATH = r"IMG/signal-2025-11-05-141904.png"
 
 st.set_page_config(page_title=f"{TOOL_NAME} • {COMPANY_NAME}", page_icon=None, layout="wide")
 
-# ---------- THEME + DESIGNS ----------
 st.markdown(
     """
     <style>
@@ -39,7 +37,6 @@ st.markdown(
         letter-spacing:.1px;
     }
 
-    /* SIDE BLUE RAILS (BIGGER + BOTH SIDES) */
     .siderail-left, .siderail-right{
         position:fixed; top:0; bottom:0; width:16px; z-index:1000; pointer-events:none;
         background:linear-gradient(180deg, #141d49 0%, #1b2470 60%, #141d49 100%);
@@ -48,7 +45,6 @@ st.markdown(
     .siderail-left{ left:0; }
     .siderail-right{ right:0; }
 
-    /* Subtle dot-grid overlay */
     .dotgrid:before{
         content:""; position:fixed; inset:0; z-index:-1; opacity:.22; pointer-events:none;
         background-image: radial-gradient(rgba(20,29,73,.12) 1px, transparent 1px);
@@ -58,11 +54,9 @@ st.markdown(
 
     .block-container{padding:0 1.25rem 2rem 1.25rem; max-width:1200px}
 
-    /* Brandbar with animated stripe */
     .brandbar{
         position:sticky; top:0; z-index:999; background:#fff; border-bottom:1px solid var(--line);
-        margin:0 -1.25rem 0.9rem -1.25rem; padding:.35rem 0 .0rem 0;
-        overflow:hidden;
+        margin:0 -1.25rem 0.9rem -1.25rem; padding:.35rem 0 0 0; overflow:hidden;
     }
     .brandwrap{display:flex; align-items:center; gap:12px; max-width:1200px; margin:0 auto; padding:0 1.25rem; justify-content:flex-start;}
     .brandlogo{max-height:46px;}
@@ -74,13 +68,11 @@ st.markdown(
     }
     @keyframes slideStripe { 0%{transform:translateX(-10%);} 100%{transform:translateX(-30%);} }
 
-    /* Hero section */
     .hero{
         display:flex; gap:16px; align-items:center; justify-content:space-between;
         background:linear-gradient(180deg,#ffffff,#f5f7ff);
         border:1px solid var(--line); border-radius:18px; padding:16px 18px;
-        box-shadow:0 14px 30px rgba(20,29,73,.08); margin-bottom:12px;
-        position:relative; overflow:hidden;
+        box-shadow:0 14px 30px rgba(20,29,73,.08); margin-bottom:12px; position:relative; overflow:hidden;
     }
     .hero:before{
         content:""; position:absolute; right:-80px; top:-80px; width:260px; height:260px; border-radius:50%;
@@ -94,7 +86,6 @@ st.markdown(
         font-size:.82rem; font-weight:600;
     }
 
-    /* Tabs + cards */
     .stTabs [data-baseweb="tab-list"]{gap:.5rem; margin:.5rem 0 .75rem}
     .stTabs [data-baseweb="tab"]{
         background:#eef2ff; border:1px solid var(--line); border-bottom:2px solid transparent; border-radius:12px 12px 0 0;
@@ -107,7 +98,6 @@ st.markdown(
         box-shadow:0 14px 30px rgba(20,29,73,.08); margin-bottom:.9rem
     }
 
-    /* Inputs */
     label{color:var(--ink)!important; font-weight:600!important}
     input,textarea,select{
         font-size:16px!important; color:var(--input-text)!important; font-family:"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif!important;
@@ -127,7 +117,6 @@ st.markdown(
     [data-testid="stRadio"] [role="radiogroup"] label:hover{background:rgba(20,29,73,.08)}
     [data-testid="stRadio"] [role="radiogroup"] input:focus+div{box-shadow:var(--ring); border-radius:12px}
 
-    /* Buttons */
     .stDownloadButton button,.stButton button{
         background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 60%,var(--brand-3) 100%)!important;
         color:#ffffff!important; border:none!important; border-radius:14px!important;
@@ -135,16 +124,13 @@ st.markdown(
     }
     .stDownloadButton button:hover,.stButton button:hover{filter:brightness(1.06)}
 
-    /* Gradient divider line */
     .gradline{height:2px; width:100%; margin:.5rem 0 1rem 0;
       background:linear-gradient(90deg, transparent, rgba(20,29,73,.65), transparent);
       border-radius:2px;}
 
-    /* Tiny feature chips row */
     .chips{display:flex; flex-wrap:wrap; gap:8px; margin:.25rem 0 .6rem 0}
     .chip{font-size:.78rem; background:#f2f5ff; border:1px solid #dbe3ff; color:var(--ink); padding:.2rem .5rem; border-radius:10px; font-weight:600}
 
-    /* Prevent header breaks (E mail) */
     .stDataFrame table { letter-spacing: 0 !important; }
     .stDataFrame thead tr th div, .stDataFrame thead tr th span,
     [data-testid="stDataFrame"] [data-testid="columnHeaderName"]{
@@ -161,12 +147,10 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# SIDE BLUE RAILS + dot grid overlay
 st.markdown("<div class='siderail-left'></div>", unsafe_allow_html=True)
 st.markdown("<div class='siderail-right'></div>", unsafe_allow_html=True)
 st.markdown("<div class='dotgrid'></div>", unsafe_allow_html=True)
 
-# ---------- BRAND BAR ----------
 st.markdown('<div class="brandbar"><div class="brandwrap">', unsafe_allow_html=True)
 try:
     st.image(LOGO_PATH, use_container_width=False, caption=None, output_format="PNG")
@@ -174,7 +158,6 @@ except Exception:
     st.write("")
 st.markdown('</div></div>', unsafe_allow_html=True)
 
-# ---------- HERO ----------
 col_hero_l, col_hero_r = st.columns([1.25, 1])
 with col_hero_l:
     st.markdown(
@@ -221,7 +204,6 @@ with col_hero_r:
         unsafe_allow_html=True,
     )
 
-# ---------- HELPERS / LOGIC ----------
 def parse_renames(txt: str):
     m = {}
     for line in txt.splitlines():
@@ -250,7 +232,7 @@ def load_df(file, sheet: str | int | None = None):
         except Exception: pass
     def _collapse_if_single_col_data(df: pd.DataFrame) -> pd.DataFrame:
         if df is None or df.shape[1] <= 1: return df
-        rows = len(df); 
+        rows = len(df)
         if rows == 0: return df
         nn = df.notna().sum()
         top_col = nn.idxmax()
@@ -385,7 +367,6 @@ def pick_sheet(uploaded_file):
     except Exception:
         return None
 
-# ---------- PHONE NORMALIZATION ----------
 _digit_re = re.compile(r"\D+")
 
 def normalize_phone_value(x):
@@ -413,22 +394,18 @@ def series_for_hash(series: pd.Series, normalize_enabled: bool, colname: str) ->
     n = s.map(normalize_phone_value)
     return n.mask(n.eq(""), s)
 
-# ---------- APP ----------
 main_tab = st.tabs(["Standard", "Advanced", "Combine"])
 
-# ----- STANDARD -----
 with main_tab[0]:
     st.subheader("Standard")
     st.markdown("One-step hashing. Output is a **single `hash` column**, **deduplicated**.")
     st.markdown("<div class='gradline'></div>", unsafe_allow_html=True)
-
     std_file = st.file_uploader("Upload a file", type=["csv","tsv","txt","xlsx","xls","xlsb","parquet"], key="std_uploader")
     c1, c2 = st.columns([1,1])
     with c1:
         std_hash = st.selectbox("Hash type", ["md5","sha1","sha256","sha512"], index=0, key="std_hash")
     with c2:
         std_norm = st.checkbox("Normalize to 10-digit phones (auto-detect)", value=True)
-
     if std_file:
         sheet = pick_sheet(std_file)
         df0 = load_df(std_file, sheet=sheet)
@@ -439,9 +416,10 @@ with main_tab[0]:
             st.caption(f"Preview shape: {r:,} × {c}")
             st.dataframe(df0.head(10), use_container_width=True, hide_index=True)
             if st.button("Hash now", type="primary", key="std_go"):
-                to_hash = series_for_hash(df0[col], std_norm, col)
-                hashed = hash_series(to_hash, std_hash)
-                result = pd.DataFrame({"hash": hashed}).drop_duplicates().reset_index(drop=True)
+                with st.spinner("Hashing..."):
+                    to_hash = series_for_hash(df0[col], std_norm, col)
+                    hashed = hash_series(to_hash, std_hash)
+                    result = pd.DataFrame({"hash": hashed}).drop_duplicates().reset_index(drop=True)
                 st.markdown("</div>", unsafe_allow_html=True)
                 st.markdown("### Result (first 10 unique hashes)")
                 st.dataframe(result.head(10), use_container_width=True, hide_index=True)
@@ -456,87 +434,92 @@ with main_tab[0]:
         else:
             st.warning("Could not read the file or it is empty.")
 
-# ----- ADVANCED -----
 with main_tab[1]:
     st.subheader("Advanced")
     st.markdown("<div class='gradline'></div>", unsafe_allow_html=True)
-
     files = st.file_uploader("Upload file(s)", type=["csv","tsv","txt","xlsx","xls","xlsb","parquet"], accept_multiple_files=True, key="adv_uploader")
     if "outputs" not in st.session_state: st.session_state["outputs"] = {}
     if "zip_bytes" not in st.session_state: st.session_state["zip_bytes"] = None
 
-    st.markdown("#### Options")
-    oc1, oc2, oc3 = st.columns([1,1,1])
-    with oc1:
-        adv_hash = st.selectbox("Hash type", ["md5","sha1","sha256","sha512"], index=0, key="adv_hash_type")
-    with oc2:
-        all_cols = []
-        if files:
-            for f in files[:20]:
-                sheet = pick_sheet(f)
-                df_tmp = load_df(f, sheet=sheet)
-                if df_tmp is not None and not df_tmp.empty:
-                    all_cols.extend(list(df_tmp.columns))
-        all_cols = sorted(pd.Index(all_cols).unique().tolist()) if all_cols else []
-        cols_to_hash = st.multiselect("Columns to hash", options=all_cols, default=all_cols[:1] if all_cols else [], key="adv_cols_to_hash")
-    with oc3:
-        suffix = st.text_input("Suffix for added hash columns (Add mode)", value=f"_{adv_hash}", key="adv_suffix")
+    with st.form("adv_options_form", clear_on_submit=False):
+        oc1, oc2, oc3 = st.columns([1,1,1])
+        with oc1:
+            adv_hash = st.selectbox("Hash type", ["md5","sha1","sha256","sha512"], index=0, key="adv_hash_type")
+        with oc2:
+            all_cols = []
+            if files:
+                for f in files[:20]:
+                    sheet = st.session_state["sheets_map"].get(f.name) or pick_sheet(f)
+                    df_tmp = load_df(f, sheet=sheet)
+                    if df_tmp is not None and not df_tmp.empty:
+                        all_cols.extend(list(df_tmp.columns))
+            all_cols = sorted(pd.Index(all_cols).unique().tolist()) if all_cols else []
+            cols_to_hash = st.multiselect("Columns to hash", options=all_cols, default=all_cols[:1] if all_cols else [], key="adv_cols_to_hash")
+        with oc3:
+            suffix = st.text_input("Suffix for added hash columns (Add mode)", value=f"_{st.session_state.get('adv_hash_type','md5')}", key="adv_suffix")
+        adv_norm = st.checkbox("Normalize to 10-digit phones (auto-detect per selected column)", value=True, key="adv_norm_chk")
+        keep_mode = st.radio(
+            "Columns to keep in output",
+            [
+                "Keep & replace — Replace each selected column with its hash (same name).",
+                "Keep all & add — Keep file as-is and add hash column(s) using the suffix.",
+                "Keep only hashed column(s) — Output just the hash column(s).",
+            ],
+            index=0,
+            key="adv_keepmode"
+        )
+        rename_on = st.checkbox("Manually rename columns", value=False, key="adv_rename_on")
+        rename_text = ""
+        if rename_on:
+            rename_text = st.text_area("Rename columns (old=new per line)", height=110, placeholder="email=primary_email\nCell=cell\nZIP=zip", key="adv_renames")
+        apply = st.form_submit_button("Apply options")
+    if apply or "adv_opts" not in st.session_state:
+        st.session_state["adv_opts"] = dict(
+            adv_hash=st.session_state.get("adv_hash_type","md5"),
+            cols_to_hash=st.session_state.get("adv_cols_to_hash",[]),
+            suffix=st.session_state.get("adv_suffix","_md5"),
+            adv_norm=st.session_state.get("adv_norm_chk",True),
+            keep_mode=st.session_state.get("adv_keepmode"),
+            rename_on=st.session_state.get("adv_rename_on",False),
+            rename_text=st.session_state.get("adv_renames","") if st.session_state.get("adv_rename_on",False) else ""
+        )
 
-    adv_norm = st.checkbox("Normalize to 10-digit phones (auto-detect per selected column)", value=True)
-
-    keep_mode = st.radio(
-        "Columns to keep in output",
-        [
-            "Keep & replace — Replace each selected column with its hash (same name).",
-            "Keep all & add — Keep file as-is and add hash column(s) using the suffix.",
-            "Keep only hashed column(s) — Output just the hash column(s).",
-        ],
-        index=1,
-        key="adv_keepmode"
-    )
-
-    rename_on = st.checkbox("Manually rename columns", value=False)
-    rename_text = ""
-    if rename_on:
-        rename_text = st.text_area("Rename columns (old=new per line)", height=110, placeholder="email=primary_email\nCell=cell\nZIP=zip", key="adv_renames")
-
+    opts = st.session_state["adv_opts"]
     if files:
         st.markdown("#### Preview (shows final output structure)")
         for file in files[:10]:
             sheet = st.session_state["sheets_map"].get(file.name) or pick_sheet(file)
             df = load_df(file, sheet=sheet)
             if df is not None and not df.empty:
-                if rename_on and rename_text.strip():
-                    df = df.rename(columns=parse_renames(rename_text))
-                sel = [c for c in cols_to_hash if c in df.columns]
+                if opts["rename_on"] and opts["rename_text"].strip():
+                    df = df.rename(columns=parse_renames(opts["rename_text"]))
+                sel = [c for c in opts["cols_to_hash"] if c in df.columns]
                 if not sel and len(df.columns) > 0:
                     sel = [df.columns[0]]
-
-                if keep_mode.startswith("Keep & replace"):
+                if opts["keep_mode"].startswith("Keep & replace"):
                     out_df = df.copy()
                     for c in sel:
-                        to_hash = series_for_hash(out_df[c], adv_norm, c)
-                        out_df[c] = hash_series(to_hash, adv_hash)
-                elif keep_mode.startswith("Keep all & add"):
+                        to_hash = series_for_hash(out_df[c], opts["adv_norm"], c)
+                        out_df[c] = hash_series(to_hash, opts["adv_hash"])
+                elif opts["keep_mode"].startswith("Keep all & add"):
                     out_df = df.copy()
-                    sfx = suffix or f"_{adv_hash}"
+                    sfx = opts["suffix"] or f"_{opts['adv_hash']}"
                     for c in sel:
-                        to_hash = series_for_hash(out_df[c], adv_norm, c)
-                        out_df[f"{c}{sfx}"] = hash_series(to_hash, adv_hash)
+                        to_hash = series_for_hash(out_df[c], opts["adv_norm"], c)
+                        out_df[f"{c}{sfx}"] = hash_series(to_hash, opts["adv_hash"])
                 else:
                     cols = {}
                     for c in sel:
-                        to_hash = series_for_hash(df[c], adv_norm, c)
-                        cols[f"{c}_{adv_hash}"] = hash_series(to_hash, adv_hash)
+                        to_hash = series_for_hash(df[c], opts["adv_norm"], c)
+                        cols[f"{c}_{opts['adv_hash']}"] = hash_series(to_hash, opts["adv_hash"])
                     out_df = pd.DataFrame(cols)
-
                 st.markdown('<div class="card">', unsafe_allow_html=True)
                 r, ccount = out_df.shape
                 st.caption(f"{file.name} — previewing first 15 rows · shape: {r:,} × {ccount}")
                 st.dataframe(out_df.head(15), use_container_width=True, hide_index=True)
                 st.markdown('</div>', unsafe_allow_html=True)
     else:
-        st.info("Upload files above, choose Columns to hash, then review the live preview here.")
+        st.info("Upload files above, set options, then review the live preview here.")
 
     st.markdown("---")
     run = st.button("Run hashing", type="primary", use_container_width=True, key="adv_run")
@@ -544,62 +527,56 @@ with main_tab[1]:
         if not files:
             st.error("Upload at least one file.")
         else:
-            zipped_buf = io.BytesIO()
-            zf = zipfile.ZipFile(zipped_buf, mode="w", compression=zipfile.ZIP_DEFLATED)
-            st.session_state["outputs"].clear()
-            total = len(files); valid = 0
-            progress = st.progress(0.0, text="Processing...")
-            renames = parse_renames(rename_text) if (rename_on and rename_text.strip()) else {}
-
-            for i, file in enumerate(files, start=1):
-                sheet = st.session_state["sheets_map"].get(file.name) or pick_sheet(file)
-                df = load_df(file, sheet=sheet)
-                if df is None or df.empty:
-                    st.warning(f"Skipped {file.name}: unsupported or empty.")
+            with st.spinner("Hashing files..."):
+                zipped_buf = io.BytesIO()
+                zf = zipfile.ZipFile(zipped_buf, mode="w", compression=zipfile.ZIP_DEFLATED)
+                st.session_state["outputs"].clear()
+                total = len(files); valid = 0
+                progress = st.progress(0.0, text="Processing...")
+                renames = parse_renames(opts["rename_text"]) if (opts["rename_on"] and opts["rename_text"].strip()) else {}
+                for i, file in enumerate(files, start=1):
+                    sheet = st.session_state["sheets_map"].get(file.name) or pick_sheet(file)
+                    df = load_df(file, sheet=sheet)
+                    if df is None or df.empty:
+                        st.warning(f"Skipped {file.name}: unsupported or empty.")
+                        progress.progress(i / total, text=f"Processed {i}/{total}")
+                        continue
+                    if renames:
+                        df = df.rename(columns=renames)
+                    sel = [c for c in opts["cols_to_hash"] if c in df.columns]
+                    if not sel:
+                        sel = [df.columns[0]]
+                    if opts["keep_mode"].startswith("Keep & replace"):
+                        out_df = df.copy()
+                        for c in sel:
+                            to_hash = series_for_hash(out_df[c], opts["adv_norm"], c)
+                            out_df[c] = hash_series(to_hash, opts["adv_hash"])
+                    elif opts["keep_mode"].startswith("Keep all & add"):
+                        out_df = df.copy()
+                        sfx = opts["suffix"] or f"_{opts['adv_hash']}"
+                        for c in sel:
+                            to_hash = series_for_hash(out_df[c], opts["adv_norm"], c)
+                            out_df[f"{c}{sfx}"] = hash_series(to_hash, opts["adv_hash"])
+                    else:
+                        cols = {}
+                        for c in sel:
+                            to_hash = series_for_hash(df[c], opts["adv_norm"], c)
+                            cols[f"{c}_{opts['adv_hash']}"] = hash_series(to_hash, opts["adv_hash"])
+                        out_df = pd.DataFrame(cols)
+                    csv_buf = io.StringIO(); out_df.to_csv(csv_buf, index=False)
+                    data_bytes = csv_buf.getvalue().encode("utf-8")
+                    out_name = f"{safe_base(file.name)}_hashed.csv"
+                    zf.writestr(out_name, data_bytes)
+                    st.session_state["outputs"][out_name] = data_bytes
+                    valid += 1
                     progress.progress(i / total, text=f"Processed {i}/{total}")
-                    continue
-                if renames:
-                    df = df.rename(columns=renames)
-
-                sel = [c for c in cols_to_hash if c in df.columns]
-                if not sel:
-                    sel = [df.columns[0]]
-
-                if keep_mode.startswith("Keep & replace"):
-                    out_df = df.copy()
-                    for c in sel:
-                        to_hash = series_for_hash(out_df[c], adv_norm, c)
-                        out_df[c] = hash_series(to_hash, adv_hash)
-                elif keep_mode.startswith("Keep all & add"):
-                    out_df = df.copy()
-                    sfx = suffix or f"_{adv_hash}"
-                    for c in sel:
-                        to_hash = series_for_hash(out_df[c], adv_norm, c)
-                        out_df[f"{c}{sfx}"] = hash_series(to_hash, adv_hash)
+                zf.close()
+                zipped_buf.seek(0)
+                if st.session_state["outputs"]:
+                    st.session_state["zip_bytes"] = zipped_buf.getvalue()
+                    st.success(f"Finished {valid} file(s). Scroll down to download.")
                 else:
-                    cols = {}
-                    for c in sel:
-                        to_hash = series_for_hash(df[c], adv_norm, c)
-                        cols[f"{c}_{adv_hash}"] = hash_series(to_hash, adv_hash)
-                    out_df = pd.DataFrame(cols)
-
-                csv_buf = io.StringIO(); out_df.to_csv(csv_buf, index=False)
-                data_bytes = csv_buf.getvalue().encode("utf-8")
-                out_name = f"{safe_base(file.name)}_hashed.csv"
-                zf.writestr(out_name, data_bytes)
-                st.session_state["outputs"][out_name] = data_bytes
-
-                valid += 1
-                progress.progress(i / total, text=f"Processed {i}/{total}")
-
-            zf.close()
-            zipped_buf.seek(0)
-            if st.session_state["outputs"]:
-                st.session_state["zip_bytes"] = zipped_buf.getvalue()
-                st.success(f"Finished {valid} file(s). Scroll down to download.")
-            else:
-                st.error("No outputs produced. Check column names and try again.")
-
+                    st.error("No outputs produced. Check column names and try again.")
     st.markdown("### Downloads")
     if st.session_state.get("outputs"):
         left, right = st.columns([2, 1])
@@ -627,11 +604,9 @@ with main_tab[1]:
     else:
         st.info("Nothing to download yet—run hashing above once you’ve set options and previews.")
 
-# ----- COMBINE -----
 with main_tab[2]:
     st.subheader("Combine (optional)")
     st.markdown("<div class='gradline'></div>", unsafe_allow_html=True)
-
     st.markdown("Merge multiple files into one. Defaults: **drop duplicate rows** ON, **source filename** OFF.")
     c_files = st.file_uploader("Upload file(s) to combine", type=["csv","tsv","txt","xlsx","xls","xlsb","parquet"], accept_multiple_files=True, key="combine_uploader")
     drop_dupes = st.checkbox("Drop duplicate rows", value=True)
@@ -640,7 +615,6 @@ with main_tab[2]:
     c_name = st.text_input("Combined file name", value="combined_output.csv")
     if c_fmt == "parquet" and not c_name.lower().endswith(".parquet"):
         c_name = c_name.rsplit(".", 1)[0] + ".parquet"
-
     def _coerce_to_single_hash(df: pd.DataFrame) -> pd.DataFrame:
         if add_source:
             return df
@@ -651,7 +625,6 @@ with main_tab[2]:
         d2 = df.drop(columns=[c for c in df.columns if df[c].isna().all()], errors="ignore")
         first = d2.columns[0]
         return d2[[first]].rename(columns={first: "hash"})
-
     if st.button("Combine files", type="primary", key="combine_go"):
         if not c_files:
             st.error("Upload at least two files.")
@@ -683,8 +656,9 @@ with main_tab[2]:
             else:
                 st.error("No valid, non-empty files to combine.")
 
-# ---------- FOOTER ----------
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
+
+
 
 
 
