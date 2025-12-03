@@ -6,12 +6,14 @@ import pandas as pd
 import streamlit as st
 import re
 
+# ---------- BRAND ----------
 COMPANY_NAME = "True Blue Analytics"
 TOOL_NAME = "Easy Hasher"
 LOGO_PATH = r"IMG/signal-2025-11-05-141904.png"
 
 st.set_page_config(page_title=f"{TOOL_NAME} • {COMPANY_NAME}", page_icon=None, layout="wide")
 
+# ---------- THEME + DESIGNS ----------
 st.markdown(
     """
     <style>
@@ -37,6 +39,7 @@ st.markdown(
         letter-spacing:.1px;
     }
 
+    /* SIDE RAILS */
     .siderail-left, .siderail-right{
         position:fixed; top:0; bottom:0; width:16px; z-index:1000; pointer-events:none;
         background:linear-gradient(180deg, #141d49 0%, #1b2470 60%, #141d49 100%);
@@ -78,7 +81,6 @@ st.markdown(
         content:""; position:absolute; right:-80px; top:-80px; width:260px; height:260px; border-radius:50%;
         background: radial-gradient(closest-side, rgba(20,29,73,.08), transparent 65%);
     }
-    .hero .left{display:flex; align-items:center; gap:14px;}
     .hero .right .badges{display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end}
     .badge{
         display:inline-flex; align-items:center; gap:6px;
@@ -128,9 +130,7 @@ st.markdown(
       background:linear-gradient(90deg, transparent, rgba(20,29,73,.65), transparent);
       border-radius:2px;}
 
-    .chips{display:flex; flex-wrap:wrap; gap:8px; margin:.25rem 0 .6rem 0}
-    .chip{font-size:.78rem; background:#f2f5ff; border:1px solid #dbe3ff; color:var(--ink); padding:.2rem .5rem; border-radius:10px; font-weight:600}
-
+    /* Prevent header wrapping like "E mail" */
     .stDataFrame table { letter-spacing: 0 !important; }
     .stDataFrame thead tr th div, .stDataFrame thead tr th span,
     [data-testid="stDataFrame"] [data-testid="columnHeaderName"]{
@@ -147,10 +147,12 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# Side rails + background dots
 st.markdown("<div class='siderail-left'></div>", unsafe_allow_html=True)
 st.markdown("<div class='siderail-right'></div>", unsafe_allow_html=True)
 st.markdown("<div class='dotgrid'></div>", unsafe_allow_html=True)
 
+# ---------- BRAND BAR ----------
 st.markdown('<div class="brandbar"><div class="brandwrap">', unsafe_allow_html=True)
 try:
     st.image(LOGO_PATH, use_container_width=False, caption=None, output_format="PNG")
@@ -158,31 +160,21 @@ except Exception:
     st.write("")
 st.markdown('</div></div>', unsafe_allow_html=True)
 
+# ---------- HERO ----------
 col_hero_l, col_hero_r = st.columns([1.25, 1])
 with col_hero_l:
     st.markdown(
         f"""
         <div class="hero">
-            <div class="left">
-                <div>
-                    <h1 style="margin:.1rem 0 .15rem 0;">{TOOL_NAME}</h1>
-                    <div class="chips">
-                        <div class="chip">MD5 / SHA-1 / SHA-256 / SHA-512</div>
-                        <div class="chip">Phone 10-digit normalize</div>
-                        <div class="chip">Live preview</div>
-                        <div class="chip">Combine & dedupe</div>
-                    </div>
-                    <div class="subtitle" style="margin-top:.25rem;">
-                        Hash emails or phones in seconds. Clean, preview, and export — built for scale and clarity.
-                    </div>
+            <div>
+                <h1 style="margin:.1rem 0 .15rem 0;">{TOOL_NAME}</h1>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin:.25rem 0 .6rem 0;">
+                    <span class="badge">MD5 / SHA-1 / SHA-256 / SHA-512</span>
+                    <span class="badge">Phone 10-digit normalize</span>
+                    <span class="badge">Live preview</span>
+                    <span class="badge">Combine & dedupe</span>
                 </div>
-            </div>
-            <div class="right">
-                <div class="badges">
-                    <span class="badge">⚡ Fast</span>
-                    <span class="badge">🔒 Local hashing</span>
-                    <span class="badge">🧩 Flexible I/O</span>
-                </div>
+                <div class="subtitle">Hash emails or phones in seconds. Clean, preview, and export — built for scale and clarity.</div>
             </div>
         </div>
         """,
@@ -204,6 +196,7 @@ with col_hero_r:
         unsafe_allow_html=True,
     )
 
+# ---------- HELPERS ----------
 def parse_renames(txt: str):
     m = {}
     for line in txt.splitlines():
@@ -224,44 +217,50 @@ def safe_base(name: str) -> str:
     base = os.path.splitext(name)[0].strip()
     return base if base else "file"
 
+# ---------- ROBUST READER ----------
 def load_df(file, sheet: str | int | None = None):
-    import pandas as pd, io
+    """
+    Safe, order-of-operations reader that never infers whitespace-delimited CSVs.
+    Tries Excel/Parquet first. For text/CSV, only uses {',', '\\t', ';', '|'} — no whitespace guessing.
+    """
+    import io as _io
     name = (getattr(file, "name", "") or "").lower()
+
     def _rewind():
         try: file.seek(0)
         except Exception: pass
+
     def _collapse_if_single_col_data(df: pd.DataFrame) -> pd.DataFrame:
-        if df is None or df.shape[1] <= 1: return df
-        rows = len(df)
-        if rows == 0: return df
-        nn = df.notna().sum()
-        top_col = nn.idxmax()
-        top_ratio = nn.max() / max(rows, 1)
-        others_nonzero = (nn.drop(index=top_col) > 0).sum()
-        if top_ratio >= 0.9 and others_nonzero == 0:
-            joined_name = "".join([str(c) for c in df.columns if str(c).strip()])
-            new_name = joined_name if 1 <= len(joined_name) <= 40 else str(top_col)
-            return pd.DataFrame({new_name: df[top_col]})
+        # Keep as-is; we only collapse pathological Excel->HTML tables that pretend to be multiple columns
         return df
+
+    # Peek header bytes
     try:
         head = file.getvalue()[:4096]
     except Exception:
         head = b""
+
     is_zip_like = head[:4] == b"PK\x03\x04"
     is_html_like = head.strip().lower().startswith((b'<!doctype', b'<html'))
+
+    # --- Parquet
     if name.endswith(".parquet"):
-        try: _rewind(); return pd.read_parquet(file, engine="pyarrow")
+        try:
+            _rewind(); return pd.read_parquet(file, engine="pyarrow")
         except Exception:
             _rewind(); return pd.read_parquet(file)
+
+    # --- Excel
     if name.endswith(".xlsb"):
         try:
             _rewind()
             return pd.read_excel(file, engine="pyxlsb", sheet_name=sheet if sheet is not None else 0)
         except Exception:
             pass
+
     if name.endswith((".xlsx", ".xlsm")) or is_zip_like:
         _rewind()
-        data = io.BytesIO(file.read())
+        data = _io.BytesIO(file.read())
         try:
             return pd.read_excel(data, engine="openpyxl", sheet_name=sheet if sheet is not None else 0)
         except Exception:
@@ -273,84 +272,76 @@ def load_df(file, sheet: str | int | None = None):
                     return df
             except Exception:
                 pass
+
     if name.endswith(".xls") or is_html_like:
+        # Try legacy Excel
         try:
             _rewind()
-            bio = io.BytesIO(file.read())
+            bio = _io.BytesIO(file.read())
             return pd.read_excel(bio, engine="xlrd", sheet_name=sheet if sheet is not None else 0)
         except Exception:
+            # Try HTML table fallback
             if is_html_like or b"<table" in head.lower():
                 try:
                     _rewind()
                     html_bytes = file.read()
-                    tables = pd.read_html(io.BytesIO(html_bytes))
+                    tables = pd.read_html(_io.BytesIO(html_bytes))
                     if tables:
-                        df = tables[0]
-                        return _collapse_if_single_col_data(df)
+                        return _collapse_if_single_col_data(tables[0])
                 except Exception:
                     pass
-            for attempt in [
-                dict(sep=None, engine="python", encoding="utf-8", on_bad_lines="skip"),
-                dict(sep=None, engine="python", encoding="utf-8-sig", on_bad_lines="skip"),
-                dict(sep=None, engine="python", encoding="latin1", on_bad_lines="skip"),
-            ]:
-                try:
-                    _rewind()
-                    df = pd.read_csv(file, **attempt)
-                    if df is not None and df.shape[1] > 0:
-                        return _collapse_if_single_col_data(df)
-                except Exception:
-                    pass
-            for sep in [",", ";", "\t", "|"]:
+            # Fall back to CSV attempts (NO whitespace delimiter)
+            for sep in [",", "\t", ";", "|"]:
                 for header in [0, None]:
                     try:
                         _rewind()
                         df = pd.read_csv(file, sep=sep, engine="python", encoding="utf-8",
-                                         on_bad_lines="skip", header=header)
+                                         on_bad_lines="skip", header=header, dtype=str, keep_default_na=False)
                         if df is not None and df.shape[1] > 0:
                             if header is None:
                                 df.columns = [f"col_{i+1}" for i in range(df.shape[1])]
-                            return _collapse_if_single_col_data(df)
+                            return df
                     except Exception:
                         continue
             st.error("`.xls` detected but could not be parsed. Pin xlrd==1.2.0 or resave as .xlsx/.csv.")
             return None
-    for attempt in [
-        dict(sep=None, engine="python", encoding="utf-8", on_bad_lines="skip"),
-        dict(sep=None, engine="python", encoding="utf-8-sig", on_bad_lines="skip"),
-        dict(sep=None, engine="python", encoding="latin1", on_bad_lines="skip"),
-    ]:
+
+    # --- CSV/TXT (SAFE CSV READ — no whitespace splitting)
+    for sep in [",", "\t", ";", "|"]:
         try:
             _rewind()
-            df = pd.read_csv(file, **attempt)
+            df = pd.read_csv(file, sep=sep, engine="python", encoding="utf-8",
+                             on_bad_lines="skip", header=0, dtype=str, keep_default_na=False)
             if df is not None and df.shape[1] > 0:
-                return _collapse_if_single_col_data(df)
+                return df
         except Exception:
             pass
-    for sep in [",", ";", "\t", "|"]:
-        for header in [0, None]:
-            try:
-                _rewind()
-                df = pd.read_csv(file, sep=sep, engine="python", encoding="utf-8",
-                                 on_bad_lines="skip", header=header)
-                if df is not None and df.shape[1] > 0:
-                    if header is None:
-                        df.columns = [f"col_{i+1}" for i in range(df.shape[1])]
-                    return _collapse_if_single_col_data(df)
-            except Exception:
-                continue
+
+    # Retry with header=None (still only with safe seps)
+    for sep in [",", "\t", ";", "|"]:
+        try:
+            _rewind()
+            df = pd.read_csv(file, sep=sep, engine="python", encoding="utf-8",
+                             on_bad_lines="skip", header=None, dtype=str, keep_default_na=False)
+            if df is not None and df.shape[1] > 0:
+                df.columns = [f"col_{i+1}" for i in range(df.shape[1])]
+                return df
+        except Exception:
+            pass
+
     _rewind()
     st.warning(f"Could not read {getattr(file, 'name', 'file')}: unsupported or corrupted content.")
     return None
 
+# Track Excel sheet choice
 if "sheets_map" not in st.session_state:
     st.session_state["sheets_map"] = {}
 
 def pick_sheet(uploaded_file):
-    import pandas as pd, io
+    import io as _io
     try:
         uploaded_file.seek(0)
-        bio = io.BytesIO(uploaded_file.read())
+        bio = _io.BytesIO(uploaded_file.read())
         xls = pd.ExcelFile(bio, engine="openpyxl")
         if len(xls.sheet_names) > 1:
             default = st.session_state["sheets_map"].get(uploaded_file.name, xls.sheet_names[0])
@@ -367,6 +358,7 @@ def pick_sheet(uploaded_file):
     except Exception:
         return None
 
+# ---------- PHONE NORMALIZATION ----------
 _digit_re = re.compile(r"\D+")
 
 def normalize_phone_value(x):
@@ -394,8 +386,10 @@ def series_for_hash(series: pd.Series, normalize_enabled: bool, colname: str) ->
     n = s.map(normalize_phone_value)
     return n.mask(n.eq(""), s)
 
+# ---------- APP ----------
 main_tab = st.tabs(["Standard", "Advanced", "Combine"])
 
+# ----- STANDARD -----
 with main_tab[0]:
     st.subheader("Standard")
     st.markdown("One-step hashing. Output is a **single `hash` column**, **deduplicated**.")
@@ -408,7 +402,8 @@ with main_tab[0]:
         std_norm = st.checkbox("Normalize to 10-digit phones (auto-detect)", value=True)
     if std_file:
         sheet = pick_sheet(std_file)
-        df0 = load_df(std_file, sheet=sheet)
+        with st.spinner("Reading file..."):
+            df0 = load_df(std_file, sheet=sheet)
         if df0 is not None and not df0.empty:
             col = st.selectbox("Column to hash", options=list(df0.columns), index=0, key="std_col")
             st.markdown('<div class="card">', unsafe_allow_html=True)
@@ -434,6 +429,7 @@ with main_tab[0]:
         else:
             st.warning("Could not read the file or it is empty.")
 
+# ----- ADVANCED -----
 with main_tab[1]:
     st.subheader("Advanced")
     st.markdown("<div class='gradline'></div>", unsafe_allow_html=True)
@@ -441,6 +437,7 @@ with main_tab[1]:
     if "outputs" not in st.session_state: st.session_state["outputs"] = {}
     if "zip_bytes" not in st.session_state: st.session_state["zip_bytes"] = None
 
+    # Use a form so typing in options doesn't trigger reruns until Apply
     with st.form("adv_options_form", clear_on_submit=False):
         oc1, oc2, oc3 = st.columns([1,1,1])
         with oc1:
@@ -450,9 +447,9 @@ with main_tab[1]:
             if files:
                 for f in files[:20]:
                     sheet = st.session_state["sheets_map"].get(f.name) or pick_sheet(f)
-                    df_tmp = load_df(f, sheet=sheet)
-                    if df_tmp is not None and not df_tmp.empty:
-                        all_cols.extend(list(df_tmp.columns))
+                    tmp = load_df(f, sheet=sheet)
+                    if tmp is not None and not tmp.empty:
+                        all_cols.extend(list(tmp.columns))
             all_cols = sorted(pd.Index(all_cols).unique().tolist()) if all_cols else []
             cols_to_hash = st.multiselect("Columns to hash", options=all_cols, default=all_cols[:1] if all_cols else [], key="adv_cols_to_hash")
         with oc3:
@@ -465,7 +462,7 @@ with main_tab[1]:
                 "Keep all & add — Keep file as-is and add hash column(s) using the suffix.",
                 "Keep only hashed column(s) — Output just the hash column(s).",
             ],
-            index=0,
+            index=0,  # default Keep & replace
             key="adv_keepmode"
         )
         rename_on = st.checkbox("Manually rename columns", value=False, key="adv_rename_on")
@@ -473,6 +470,7 @@ with main_tab[1]:
         if rename_on:
             rename_text = st.text_area("Rename columns (old=new per line)", height=110, placeholder="email=primary_email\nCell=cell\nZIP=zip", key="adv_renames")
         apply = st.form_submit_button("Apply options")
+
     if apply or "adv_opts" not in st.session_state:
         st.session_state["adv_opts"] = dict(
             adv_hash=st.session_state.get("adv_hash_type","md5"),
@@ -485,11 +483,13 @@ with main_tab[1]:
         )
 
     opts = st.session_state["adv_opts"]
+
     if files:
         st.markdown("#### Preview (shows final output structure)")
         for file in files[:10]:
             sheet = st.session_state["sheets_map"].get(file.name) or pick_sheet(file)
-            df = load_df(file, sheet=sheet)
+            with st.spinner(f"Reading {file.name}..."):
+                df = load_df(file, sheet=sheet)
             if df is not None and not df.empty:
                 if opts["rename_on"] and opts["rename_text"].strip():
                     df = df.rename(columns=parse_renames(opts["rename_text"]))
@@ -604,6 +604,7 @@ with main_tab[1]:
     else:
         st.info("Nothing to download yet—run hashing above once you’ve set options and previews.")
 
+# ----- COMBINE -----
 with main_tab[2]:
     st.subheader("Combine (optional)")
     st.markdown("<div class='gradline'></div>", unsafe_allow_html=True)
@@ -615,6 +616,7 @@ with main_tab[2]:
     c_name = st.text_input("Combined file name", value="combined_output.csv")
     if c_fmt == "parquet" and not c_name.lower().endswith(".parquet"):
         c_name = c_name.rsplit(".", 1)[0] + ".parquet"
+
     def _coerce_to_single_hash(df: pd.DataFrame) -> pd.DataFrame:
         if add_source:
             return df
@@ -625,6 +627,7 @@ with main_tab[2]:
         d2 = df.drop(columns=[c for c in df.columns if df[c].isna().all()], errors="ignore")
         first = d2.columns[0]
         return d2[[first]].rename(columns={first: "hash"})
+
     if st.button("Combine files", type="primary", key="combine_go"):
         if not c_files:
             st.error("Upload at least two files.")
@@ -632,7 +635,8 @@ with main_tab[2]:
             frames = []
             for f in c_files:
                 sheet = st.session_state["sheets_map"].get(f.name) or pick_sheet(f)
-                df = load_df(f, sheet=sheet)
+                with st.spinner(f"Reading {f.name}..."):
+                    df = load_df(f, sheet=sheet)
                 if df is not None and not df.empty:
                     df_std = _coerce_to_single_hash(df)
                     if add_source and "source_filename" not in df_std.columns:
@@ -656,9 +660,8 @@ with main_tab[2]:
             else:
                 st.error("No valid, non-empty files to combine.")
 
+# ---------- FOOTER ----------
 st.markdown(f"<div class='footer'><div class='footerwrap'>{COMPANY_NAME}</div></div>", unsafe_allow_html=True)
-
-
 
 
 
