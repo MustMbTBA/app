@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Easy Hasher • True Blue Analytics</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="IMG/true_blue_analytics_transparent.png">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap');
+    :root{
+      --bg1:#eff4ff; --bg2:#eaf1ff; --panel:#ffffff;
+      --ink:#141d49; --muted:#6e7b99; --line:#d9e2ff;
+      --brand:#141d49; --brand-2:#141d49; --brand-3:#141d49;
+      --accent:#b7c8ff; --focus:#3aa0ff;
+      --input-bg:#ffffff; --input-text:#141d49; --placeholder:#8fa1c0; --input-border:#b9c8ef;
+      --ring:0 0 0 3px rgba(20,29,73,.28);
+    }
+    *{
+      box-sizing:border-box;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+    html,body{
+      margin:0;
+      padding:0;
+      background:
+        radial-gradient(1200px 800px at 90% -10%, rgba(20,29,73,.08) 0%, rgba(20,29,73,0) 60%),
+        radial-gradient(900px 600px at -10% 10%, rgba(20,29,73,.06) 0%, rgba(20,29,73,0) 55%),
+        linear-gradient(180deg,var(--bg1),var(--bg2));
+      color:var(--ink);
+      font-family:"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      letter-spacing:.1px;
+      min-height:100vh;
+    }
+    .dotgrid:before{
+      content:"";
+      position:fixed;
+      inset:0;
+      z-index:-1;
+      opacity:.22;
+      pointer-events:none;
+      background-image:radial-gradient(rgba(20,29,73,.12) 1px, transparent 1px);
+      background-size:18px 18px;
+      mask-image:linear-gradient(to bottom, rgba(0,0,0,.8), rgba(0,0,0,0));
+    }
+    .siderail-left,.siderail-right{
+      position:fixed;
+      top:0;
+      bottom:0;
+      width:16px;
+      z-index:1000;
+      pointer-events:none;
+      background:linear-gradient(180deg, #141d49 0%, #1b2470 60%, #141d49 100%);
+      box-shadow:0 0 22px rgba(20,29,73,.40);
+    }
+    .siderail-left{left:0;}
+    .siderail-right{right:0;}
+    .brandbar{
+      position:sticky;
+      top:0;
+      z-index:999;
+      background:#fff;
+      border-bottom:1px solid var(--line);
+      margin:0;
+      padding:.35rem 0 0 0;
+      overflow:hidden;
+    }
+    .brandwrap{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      max-width:1200px;
+      margin:0 auto;
+      padding:0 1.25rem;
+      justify-content:flex-start;
+    }
+    .brandlogo{
+      max-height:46px;
+    }
+    .brandtext-title{
+      font-weight:800;
+      font-size:1.1rem;
+    }
+    .brandtext-sub{
+      font-size:.8rem;
+      color:var(--muted);
+    }
+    .brandbar:after{
+      content:"";
+      display:block;
+      height:3px;
+      width:120%;
+      background:linear-gradient(90deg, rgba(20,29,73,.0), rgba(20,29,73,.35), rgba(20,29,73,.9), rgba(20,29,73,.35), rgba(20,29,73,.0));
+      animation:slideStripe 6s linear infinite;
+      transform:translateX(-10%);
+    }
+    @keyframes slideStripe{
+      0%{transform:translateX(-10%);}
+      100%{transform:translateX(-30%);}
+    }
+    .block-container{
+      padding:0 1.25rem 2rem 1.25rem;
+      max-width:1200px;
+      margin:0 auto;
+    }
+    .hero{
+      display:flex;
+      flex-wrap:wrap;
+      gap:16px;
+      align-items:center;
+      justify-content:space-between;
+      background:linear-gradient(180deg,#ffffff,#f5f7ff);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:16px 18px;
+      box-shadow:0 14px 30px rgba(20,29,73,.08);
+      margin:1rem 0 0.75rem 0;
+      position:relative;
+      overflow:hidden;
+    }
+    .hero:before{
+      content:"";
+      position:absolute;
+      right:-80px;
+      top:-80px;
+      width:260px;
+      height:260px;
+      border-radius:50%;
+      background:radial-gradient(closest-side, rgba(20,29,73,.08), transparent 65%);
+    }
+    .hero-main h1{
+      margin:.1rem 0 .15rem 0;
+      font-size:1.5rem;
+    }
+    .hero-main .subtitle{
+      font-size:.9rem;
+      color:var(--muted);
+      max-width:420px;
+    }
+    .badge-row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin:.25rem 0 .6rem 0;
+    }
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      padding:.32rem .6rem;
+      border-radius:999px;
+      border:1px solid #dbe3ff;
+      background:#eef2ff;
+      color:var(--ink);
+      font-size:.8rem;
+      font-weight:600;
+      white-space:nowrap;
+    }
+    .hero-card{
+      min-width:220px;
+      max-width:320px;
+    }
+    .card{
+      background:linear-gradient(180deg,#ffffff,#f5f7ff);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:1rem 1rem 1.1rem 1rem;
+      box-shadow:0 14px 30px rgba(20,29,73,.08);
+      margin-bottom:.9rem;
+    }
+    .card h2{
+      margin:0 0 .4rem 0;
+      font-size:1rem;
+    }
+    .gradline{
+      height:2px;
+      width:100%;
+      margin:.5rem 0 1rem 0;
+      background:linear-gradient(90deg, transparent, rgba(20,29,73,.65), transparent);
+      border-radius:2px;
+    }
+    .tabs{
+      margin-top:.5rem;
+    }
+    .tab-buttons{
+      display:flex;
+      flex-wrap:wrap;
+      gap:.5rem;
+      margin:.5rem 0 .5rem 0;
+    }
+    .tab-btn{
+      background:#eef2ff;
+      border:1px solid var(--line);
+      border-bottom:2px solid transparent;
+      border-radius:12px 12px 0 0;
+      padding:.68rem 1rem;
+      color:var(--ink);
+      font-weight:650;
+      font-size:.9rem;
+      cursor:pointer;
+    }
+    .tab-btn.active{
+      background:#ffffff;
+      border-bottom:4px solid var(--brand-2);
+    }
+    .tab-panel{
+      display:none;
+      background:#ffffff;
+      border-radius:0 12px 12px 12px;
+      border:1px solid var(--line);
+      padding:1rem;
+      box-shadow:0 14px 30px rgba(20,29,73,.04);
+    }
+    .tab-panel.active{
+      display:block;
+    }
+    label{
+      color:var(--ink);
+      font-weight:600;
+      font-size:.9rem;
+      display:block;
+      margin-bottom:.25rem;
+    }
+    input[type="file"],
+    select,
+    input[type="text"],
+    textarea{
+      width:100%;
+      font-size:.9rem;
+      font-family:"Montserrat",system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+      border-radius:14px;
+      border:1px solid var(--input-border);
+      padding:.6rem .75rem;
+      background:var(--input-bg);
+      color:var(--input-text);
+      outline:none;
+    }
+    input[type="text"]::placeholder,
+    textarea::placeholder{
+      color:var(--placeholder);
+    }
+    input[type="file"]{
+      padding:.45rem .4rem;
+    }
+    input:focus,
+    select:focus,
+    textarea:focus{
+      box-shadow:var(--ring);
+      border-color:var(--brand-3);
+    }
+    textarea{
+      min-height:90px;
+      resize:vertical;
+    }
+    .row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:.75rem;
+    }
+    .col-3{
+      flex:1 1 30%;
+      min-width:180px;
+    }
+    .col-2{
+      flex:1 1 45%;
+      min-width:220px;
+    }
+    .checkbox-row{
+      display:flex;
+      align-items:center;
+      gap:.45rem;
+      margin:.4rem 0;
+      font-size:.85rem;
+    }
+    .checkbox-row input[type="checkbox"]{
+      width:auto;
+      height:auto;
+      border-radius:6px;
+    }
+    .radio-group{
+      display:flex;
+      flex-direction:column;
+      gap:.35rem;
+      font-size:.85rem;
+      margin:.45rem 0 .75rem 0;
+    }
+    .radio-item{
+      display:flex;
+      align-items:flex-start;
+      gap:.4rem;
+      padding:.35rem .5rem;
+      border-radius:12px;
+      cursor:pointer;
+    }
+    .radio-item:hover{
+      background:rgba(20,29,73,.06);
+    }
+    .radio-item input[type="radio"]{
+      margin-top:.1rem;
+    }
+    .btn{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:.4rem;
+      background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 60%,var(--brand-3) 100%);
+      color:#ffffff;
+      border:none;
+      border-radius:14px;
+      padding:.75rem 1rem;
+      font-weight:700;
+      font-size:.9rem;
+      letter-spacing:.2px;
+      cursor:pointer;
+      text-decoration:none;
+    }
+    .btn.secondary{
+      background:#eef2ff;
+      color:var(--ink);
+      border:1px solid var(--line);
+      font-weight:600;
+    }
+    .btn:disabled{
+      opacity:.65;
+      cursor:not-allowed;
+    }
+    .btn-block{
+      width:100%;
+      justify-content:center;
+    }
+    .status{
+      font-size:.82rem;
+      margin:.4rem 0 .6rem 0;
+      min-height:1.1em;
+    }
+    .status.info{color:var(--muted);}
+    .status.error{color:#b3261e;}
+    .status.success{color:#0b7a2a;}
+    .table-wrap{
+      width:100%;
+      overflow:auto;
+      border-radius:10px;
+      border:1px solid var(--line);
+      background:#f8f9ff;
+      margin-top:.4rem;
+    }
+    table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:.8rem;
+    }
+    thead{
+      background:#e4e9ff;
+    }
+    th,td{
+      padding:.35rem .55rem;
+      border-bottom:1px solid var(--line);
+      white-space:nowrap;
+    }
+    th{
+      text-align:left;
+      font-weight:700;
+    }
+    tr:nth-child(even) td{
+      background:#f5f7ff;
+    }
+    .downloads-list{
+      display:flex;
+      flex-direction:column;
+      gap:.4rem;
+      margin-top:.5rem;
+    }
+    .footer{
+      background:linear-gradient(135deg,var(--brand) 0%,var(--brand-2) 60%,var(--brand-3) 100%);
+      color:#fff;
+      border-top:1px solid var(--line);
+      margin-top:1.5rem;
+    }
+    .footerwrap{
+      max-width:1200px;
+      margin:0 auto;
+      padding:.9rem 1.25rem;
+      font-weight:800;
+      letter-spacing:.3px;
+      font-size:.85rem;
+    }
+    .card-title-row{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:.5rem;
+    }
+    .pill{
+      font-size:.75rem;
+      padding:.1rem .6rem;
+      border-radius:999px;
+      border:1px solid var(--line);
+      color:var(--muted);
+      background:#f6f7ff;
+      white-space:nowrap;
+    }
+    .tag-label{
+      font-size:.8rem;
+      font-weight:600;
+      margin:.3rem 0 .1rem;
+    }
+    .multi-select{
+      min-height:110px;
+    }
+    .hint{
+      font-size:.78rem;
+      color:var(--muted);
+      margin-top:.15rem;
+    }
+    .section-divider{
+      margin:1rem 0 .6rem;
+      border-top:1px solid var(--line);
+    }
+    .card-grid{
+      display:flex;
+      flex-direction:column;
+      gap:.75rem;
+      margin-top:.5rem;
+    }
+    .loading-overlay{
+      position:fixed;
+      inset:0;
+      background:rgba(5,10,30,.36);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      z-index:2000;
+      visibility:hidden;
+      opacity:0;
+      transition:opacity .18s ease, visibility .18s ease;
+    }
+    .loading-overlay.visible{
+      visibility:visible;
+      opacity:1;
+    }
+    .loading-box{
+      background:#ffffff;
+      border-radius:18px;
+      padding:1rem 1.5rem;
+      box-shadow:0 18px 40px rgba(0,0,0,.28);
+      display:flex;
+      align-items:center;
+      gap:.9rem;
+      min-width:220px;
+      max-width:320px;
+    }
+    .spinner{
+      width:26px;
+      height:26px;
+      border-radius:999px;
+      border:3px solid #ccd4ff;
+      border-top-color:var(--brand-3);
+      animation:spin 0.7s linear infinite;
+    }
+    @keyframes spin{
+      to{transform:rotate(360deg);}
+    }
+    .spinner-text{
+      font-size:.9rem;
+      font-weight:600;
+      color:var(--ink);
+    }
+    @media (max-width:720px){
+      .hero-main .subtitle{
+        max-width:none;
+      }
+      .tab-panel{
+        border-radius:12px;
+      }
+    }
+  </style>
+</head>
+<body class="dotgrid">
+  <div class="siderail-left"></div>
+  <div class="siderail-right"></div>
+
+  <header class="brandbar">
+    <div class="brandwrap">
+      <img src="IMG/true_blue_analytics_transparent.png" alt="True Blue Analytics" class="brandlogo">
+      <div>
+        <div class="brandtext-title">Easy Hasher</div>
+        <div class="brandtext-sub">Hash emails or phones in seconds. Built for clean donor data.</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="block-container">
+    <section class="hero">
+      <div class="hero-main">
+        <h1>Easy Hasher</h1>
+        <div class="badge-row">
+          <span class="badge">MD5 / SHA-1 / SHA-256 / SHA-512</span>
+          <span class="badge">Phone 10-digit normalize</span>
+          <span class="badge">Multi-file hashing</span>
+          <span class="badge">Combine & dedupe</span>
+        </div>
+        <div class="subtitle">Upload files, pick columns, and export hashed outputs in seconds. Everything runs in your browser, no server required.</div>
+      </div>
+      <div class="hero-card card">
+        <h2>How it works</h2>
+        <div class="gradline"></div>
+        <ol style="margin:.3rem 0 0 1rem; padding:0; line-height:1.45; font-size:.9rem;">
+          <li>Upload CSV / Excel</li>
+          <li>Select column(s) and hash type</li>
+          <li>Preview result and download</li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="tabs">
+      <div class="tab-buttons">
+        <button class="tab-btn active" data-tab="standard">Standard</button>
+        <button class="tab-btn" data-tab="advanced">Advanced</button>
+        <button class="tab-btn" data-tab="combine">Combine</button>
+      </div>
+
+      <!-- STANDARD TAB -->
+      <div id="tab-standard" class="tab-panel active">
+        <div class="card-title-row">
+          <h2 style="margin:0;">Standard hashing</h2>
+          <span class="pill">One file · one column · deduped</span>
+        </div>
+        <div class="gradline"></div>
+        <p style="font-size:.88rem; margin:.1rem 0 .6rem 0;">Hashes a single column, returns one <strong>hash</strong> column with duplicates removed.</p>
+        <div class="row">
+          <div class="col-2">
+            <label for="std-file">Upload a file</label>
+            <input id="std-file" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsb">
+            <div class="hint">Large files run entirely in your browser; for very big datasets you may prefer a backend solution.</div>
+          </div>
+          <div class="col-2">
+            <label for="std-hash">Hash type</label>
+            <select id="std-hash">
+              <option value="md5" selected>md5</option>
+              <option value="sha1">sha1</option>
+              <option value="sha256">sha256</option>
+              <option value="sha512">sha512</option>
+            </select>
+            <div class="checkbox-row">
+              <input id="std-norm" type="checkbox" checked>
+              <label for="std-norm" style="margin:0; font-weight:500;">Normalize to 10-digit phones (auto-detect)</label>
+            </div>
+          </div>
+        </div>
+        <div class="row" style="margin-top:.6rem;">
+          <div class="col-2">
+            <label for="std-col">Column to hash</label>
+            <select id="std-col"></select>
+          </div>
+          <div class="col-2" style="display:flex; align-items:flex-end;">
+            <button id="std-go" class="btn btn-block" disabled>Hash now</button>
+          </div>
+        </div>
+        <div id="std-status" class="status info"></div>
+        <div id="std-preview"></div>
+        <div class="section-divider"></div>
+        <h3 style="margin:.4rem 0 .25rem 0; font-size:.98rem;">Result (first 10 unique hashes)</h3>
+        <div id="std-result"></div>
+        <div id="std-download-wrap" style="margin-top:.5rem;"></div>
+      </div>
+
+      <!-- ADVANCED TAB -->
+      <div id="tab-advanced" class="tab-panel">
+        <div class="card-title-row">
+          <h2 style="margin:0;">Advanced hashing</h2>
+          <span class="pill">Multi-file · rename · add/replace · ZIP</span>
+        </div>
+        <div class="gradline"></div>
+        <p style="font-size:.88rem; margin:.1rem 0 .6rem 0;">Upload multiple files, choose columns, and output per-file hashed CSVs and an optional ZIP.</p>
+
+        <label for="adv-files">Upload file(s)</label>
+        <input id="adv-files" type="file" multiple accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsb">
+        <div class="status info" id="adv-status"></div>
+
+        <div class="row">
+          <div class="col-3">
+            <label for="adv-hash">Hash type</label>
+            <select id="adv-hash">
+              <option value="md5" selected>md5</option>
+              <option value="sha1">sha1</option>
+              <option value="sha256">sha256</option>
+              <option value="sha512">sha512</option>
+            </select>
+          </div>
+          <div class="col-3">
+            <label for="adv-cols">Columns to hash</label>
+            <select id="adv-cols" multiple class="multi-select"></select>
+            <div class="hint">If none selected for a file, its first column is used.</div>
+          </div>
+          <div class="col-3">
+            <label for="adv-suffix">Suffix for added hash columns (Add mode)</label>
+            <input id="adv-suffix" type="text" value="_md5">
+            <div class="checkbox-row">
+              <input id="adv-norm" type="checkbox" checked>
+              <label for="adv-norm" style="margin:0; font-weight:500;">Normalize to 10-digit phones (auto-detect per column)</label>
+            </div>
+          </div>
+        </div>
+
+        <div class="tag-label">Columns to keep in output</div>
+        <div class="radio-group" id="adv-keep-group">
+          <label class="radio-item">
+            <input type="radio" name="adv-keep" value="replace" checked>
+            <span>Keep & replace — replace each selected column with its hash (same name).</span>
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="adv-keep" value="add">
+            <span>Keep all & add — keep file as-is and add hash column(s) using the suffix.</span>
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="adv-keep" value="only">
+            <span>Keep only hashed column(s) — output just the hash column(s).</span>
+          </label>
+        </div>
+
+        <div class="checkbox-row">
+          <input id="adv-rename-on" type="checkbox">
+          <label for="adv-rename-on" style="margin:0; font-weight:500;">Manually rename columns before hashing</label>
+        </div>
+        <div id="adv-rename-block" style="display:none; margin-bottom:.6rem;">
+          <label for="adv-renames">Rename columns (one mapping per line: old=new)</label>
+          <textarea id="adv-renames" placeholder="email=primary_email&#10;Cell=cell&#10;ZIP=zip"></textarea>
+          <div class="hint">Applies to all uploaded files.</div>
+        </div>
+
+        <div class="row" style="margin-top:.4rem; align-items:center;">
+          <div class="col-2">
+            <button id="adv-preview-btn" class="btn secondary btn-block">Update preview</button>
+          </div>
+          <div class="col-2">
+            <button id="adv-run-btn" class="btn btn-block">Run hashing</button>
+          </div>
+        </div>
+
+        <div id="adv-preview" class="card-grid"></div>
+
+        <div class="section-divider"></div>
+        <h3 style="margin:.4rem 0 .25rem 0; font-size:.98rem;">Downloads</h3>
+        <div id="adv-downloads" class="downloads-list"></div>
+      </div>
+
+      <!-- COMBINE TAB -->
+      <div id="tab-combine" class="tab-panel">
+        <div class="card-title-row">
+          <h2 style="margin:0;">Combine files</h2>
+          <span class="pill">Merge hashed outputs</span>
+        </div>
+        <div class="gradline"></div>
+        <p style="font-size:.88rem; margin:.1rem 0 .6rem 0;">Merge multiple files into one output. Defaults: drop duplicate rows ON, no source filename column.</p>
+
+        <label for="combine-files">Upload file(s) to combine</label>
+        <input id="combine-files" type="file" multiple accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsb">
+
+        <div class="checkbox-row">
+          <input id="combine-drop" type="checkbox" checked>
+          <label for="combine-drop" style="margin:0; font-weight:500;">Drop duplicate rows</label>
+        </div>
+        <div class="checkbox-row">
+          <input id="combine-source" type="checkbox">
+          <label for="combine-source" style="margin:0; font-weight:500;">Add source filename column</label>
+        </div>
+
+        <div class="row">
+          <div class="col-2">
+            <label for="combine-format">Output format</label>
+            <select id="combine-format">
+              <option value="csv" selected>csv</option>
+            </select>
+            <div class="hint">Browser version outputs CSV. Parquet is better handled on a backend.</div>
+          </div>
+          <div class="col-2">
+            <label for="combine-name">Combined file name</label>
+            <input id="combine-name" type="text" value="combined_output.csv">
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:.6rem;">
+          <div class="col-2">
+            <button id="combine-go" class="btn btn-block">Combine files</button>
+          </div>
+        </div>
+        <div id="combine-status" class="status info"></div>
+        <div id="combine-download-wrap" style="margin-top:.5rem;"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="footerwrap">True Blue Analytics</div>
+  </footer>
+
+  <div id="loading-overlay" class="loading-overlay">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <div class="spinner-text" id="loading-text">Working...</div>
+    </div>
+  </div>
+
+  <!-- libs -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+  <script>
+    const COMPANY_NAME = "True Blue Analytics";
+    const TOOL_NAME = "Easy Hasher";
+
+    let stdData = null;
+    let stdBlob = null;
+
+    let advFilesData = [];
+    let advOutputs = [];
+    let advZipBlob = null;
+
+    let combineFilesData = [];
+
+    function showLoading(message) {
+      const overlay = document.getElementById("loading-overlay");
+      const text = document.getElementById("loading-text");
+      text.textContent = message || "Working...";
+      overlay.classList.add("visible");
+    }
+    function hideLoading() {
+      const overlay = document.getElementById("loading-overlay");
+      overlay.classList.remove("visible");
+    }
+    function baseName(name) {
+      const idx = name.lastIndexOf(".");
+      if (idx === -1) return name || "file";
+      const b = name.slice(0, idx).trim();
+      return b || "file";
+    }
+
+    function renderTable(containerOrId, headers, rows, maxRows) {
+      const container = typeof containerOrId === "string"
+        ? document.getElementById(containerOrId)
+        : containerOrId;
+      if (!container) return;
+      container.innerHTML = "";
+      if (!headers || !headers.length || !rows) return;
+      const limit = maxRows ? Math.min(rows.length, maxRows) : rows.length;
+      const wrap = document.createElement("div");
+      wrap.className = "table-wrap";
+      const table = document.createElement("table");
+      const thead = document.createElement("thead");
+      const headRow = document.createElement("tr");
+      headers.forEach(h => {
+        const th = document.createElement("th");
+        th.textContent = h;
+        headRow.appendChild(th);
+      });
+      thead.appendChild(headRow);
+      table.appendChild(thead);
+      const tbody = document.createElement("tbody");
+      for (let i = 0; i < limit; i++) {
+        const tr = document.createElement("tr");
+        const row = rows[i] || [];
+        headers.forEach((_, idx) => {
+          const td = document.createElement("td");
+          const v = row[idx] != null ? String(row[idx]) : "";
+          td.textContent = v;
+          tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+      }
+      table.appendChild(tbody);
+      wrap.appendChild(table);
+      container.appendChild(wrap);
+    }
+
+    function hashValue(str, algo) {
+      const s = String(str == null ? "" : str);
+      if (algo === "md5") return CryptoJS.MD5(s).toString();
+      if (algo === "sha1") return CryptoJS.SHA1(s).toString();
+      if (algo === "sha256") return CryptoJS.SHA256(s).toString();
+      if (algo === "sha512") return CryptoJS.SHA512(s).toString();
+      return CryptoJS.MD5(s).toString();
+    }
+
+    const digitRe = /\D+/g;
+    function normalizePhoneValue(x) {
+      const s = x == null ? "" : String(x);
+      let d = s.replace(digitRe, "");
+      if (d.length === 11 && d.startsWith("1")) {
+        d = d.slice(1);
+      } else if (d.length > 10) {
+        d = d.slice(-10);
+      }
+      if (d.length === 10) return d;
+      return "";
+    }
+    function looksLikePhone(values, colName) {
+      const name = (colName || "").toLowerCase();
+      const tokens = ["phone", "cell", "mobile", "tel"];
+      for (const t of tokens) {
+        if (name.includes(t)) return true;
+      }
+      if (!values || !values.length) return false;
+      let count = 0;
+      let total = 0;
+      const limit = Math.min(values.length, 400);
+      for (let i = 0; i < limit; i++) {
+        const v = values[i];
+        if (v == null || v === "") continue;
+        const s = String(v);
+        const d = s.replace(digitRe, "");
+        if (d.length >= 10) count += 1;
+        total += 1;
+      }
+      if (total === 0) return false;
+      return count / total >= 0.6;
+    }
+    function seriesForHash(values, normalizeEnabled, colName) {
+      const out = [];
+      if (!values) return out;
+      const shouldNormalize = normalizeEnabled && looksLikePhone(values, colName);
+      if (!shouldNormalize) {
+        for (let i = 0; i < values.length; i++) {
+          const v = values[i];
+          out.push(v == null ? "" : String(v));
+        }
+        return out;
+      }
+      for (let i = 0; i < values.length; i++) {
+        const v = values[i];
+        const s = v == null ? "" : String(v);
+        const n = normalizePhoneValue(s);
+        out.push(n || s);
+      }
+      return out;
+    }
+
+    function parseRenames(text) {
+      const map = {};
+      if (!text) return map;
+      const lines = text.split(/\r?\n/);
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line || line.startsWith("#")) continue;
+        const idx = line.indexOf("=");
+        if (idx === -1) continue;
+        const a = line.slice(0, idx).trim();
+        const b = line.slice(idx + 1).trim();
+        if (a && b) map[a] = b;
+      }
+      return map;
+    }
+
+    function toCsv(headers, rows) {
+      const esc = v => {
+        const s = v == null ? "" : String(v);
+        if (s.includes('"') || s.includes(",") || s.includes("\n") || s.includes("\r")) {
+          return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+      };
+      const lines = [];
+      lines.push(headers.map(esc).join(","));
+      for (const row of rows) {
+        const line = headers.map((_, idx) => esc(row[idx]));
+        lines.push(line.join(","));
+      }
+      return lines.join("\n");
+    }
+
+    function parseFile(file) {
+      return new Promise((resolve, reject) => {
+        const name = file.name.toLowerCase();
+        const isExcel = name.endsWith(".xlsx") || name.endsWith(".xlsm") || name.endsWith(".xlsb") || name.endsWith(".xls");
+        if (isExcel) {
+          const reader = new FileReader();
+          reader.onload = e => {
+            try {
+              const data = new Uint8Array(e.target.result);
+              const wb = XLSX.read(data, {type:"array"});
+              const sheetName = wb.SheetNames[0];
+              const ws = wb.Sheets[sheetName];
+              const json = XLSX.utils.sheet_to_json(ws, {header:1, defval:""});
+              if (!json || !json.length) {
+                resolve(null);
+                return;
+              }
+              const headerRow = json[0];
+              const headers = headerRow.map((v, idx) => {
+                const s = v == null ? "" : String(v).trim();
+                return s || "col_" + (idx + 1);
+              });
+              const rows = json.slice(1).map(r => {
+                const row = [];
+                for (let i = 0; i < headers.length; i++) {
+                  row.push(r[i] == null ? "" : r[i]);
+                }
+                return row;
+              });
+              resolve({name:file.name, headers, rows});
+            } catch (err) {
+              reject(err);
+            }
+          };
+          reader.onerror = () => reject(reader.error);
+          reader.readAsArrayBuffer(file);
+          return;
+        }
+        Papa.parse(file, {
+          header:true,
+          skipEmptyLines:"greedy",
+          dynamicTyping:false,
+          complete: res => {
+            try {
+              if (res && res.meta && res.meta.fields && res.meta.fields.length && res.data && res.data.length) {
+                const headers = res.meta.fields;
+                const rows = res.data.map(obj => headers.map(h => obj[h]));
+                resolve({name:file.name, headers, rows});
+              } else {
+                Papa.parse(file, {
+                  header:false,
+                  skipEmptyLines:"greedy",
+                  dynamicTyping:false,
+                  complete: res2 => {
+                    if (!res2 || !res2.data || !res2.data.length) {
+                      resolve(null);
+                      return;
+                    }
+                    const rawRows = res2.data;
+                    const headers = rawRows[0].map((_, idx) => "col_" + (idx + 1));
+                    const rows = rawRows.slice(1).map(r => {
+                      const row = [];
+                      for (let i = 0; i < headers.length; i++) row.push(r[i] == null ? "" : r[i]);
+                      return row;
+                    });
+                    resolve({name:file.name, headers, rows});
+                  },
+                  error: err2 => reject(err2)
+                });
+              }
+            } catch (err) {
+              reject(err);
+            }
+          },
+          error: err => reject(err)
+        });
+      });
+    }
+
+    function transformAdvancedFile(data, opts, full) {
+      if (!data || !data.headers || !data.headers.length || !data.rows) return null;
+      let headers = data.headers.slice();
+      let rows = full ? data.rows.map(r => r.slice()) : data.rows.slice(0, 50).map(r => r.slice());
+      if (opts.renames && Object.keys(opts.renames).length) {
+        headers = headers.map(h => opts.renames[h] || h);
+      }
+      const colSet = new Set(headers);
+      const selected = [];
+      for (const c of opts.colsToHash) {
+        if (colSet.has(c)) selected.push(c);
+      }
+      if (!selected.length && headers.length) selected.push(headers[0]);
+      const hashAlgo = opts.hashType || "md5";
+      const normalize = !!opts.normalize;
+
+      if (opts.keepMode === "only") {
+        const cols = [];
+        for (const c of selected) {
+          const idx = headers.indexOf(c);
+          if (idx === -1) continue;
+          const values = rows.map(r => r[idx]);
+          const series = seriesForHash(values, normalize, c);
+          const hashed = series.map(v => hashValue(v, hashAlgo));
+          cols.push({name:c + "_" + hashAlgo, values:hashed});
+        }
+        if (!cols.length) return null;
+        const outHeaders = cols.map(c => c.name);
+        const outRows = rows.map((_, rowIdx) => cols.map(c => c.values[rowIdx]));
+        return {headers:outHeaders, rows:outRows};
+      }
+
+      if (opts.keepMode === "add") {
+        const suffix = opts.suffix && opts.suffix.trim() ? opts.suffix.trim() : "_" + hashAlgo;
+        const outHeaders = headers.slice();
+        const colValues = {};
+        for (const c of selected) {
+          const idx = headers.indexOf(c);
+          if (idx === -1) continue;
+          const values = rows.map(r => r[idx]);
+          const series = seriesForHash(values, normalize, c);
+          const hashed = series.map(v => hashValue(v, hashAlgo));
+          const newName = c + suffix;
+          colValues[newName] = hashed;
+          outHeaders.push(newName);
+        }
+        const outRows = rows.map((row, rowIdx) => {
+          const r = row.slice();
+          for (const newName of Object.keys(colValues)) {
+            r.push(colValues[newName][rowIdx]);
+          }
+          return r;
+        });
+        return {headers:outHeaders, rows:outRows};
+      }
+
+      if (opts.keepMode === "replace") {
+        const outHeaders = headers.slice();
+        const outRows = rows.map(row => row.slice());
+        for (const c of selected) {
+          const idx = headers.indexOf(c);
+          if (idx === -1) continue;
+          const values = outRows.map(r => r[idx]);
+          const series = seriesForHash(values, normalize, c);
+          const hashed = series.map(v => hashValue(v, hashAlgo));
+          for (let i = 0; i < outRows.length; i++) {
+            outRows[i][idx] = hashed[i];
+          }
+        }
+        return {headers:outHeaders, rows:outRows};
+      }
+
+      return null;
+    }
+
+    function coerceToSingleHash(data, addSource) {
+      if (!data || !data.headers || !data.headers.length || !data.rows) return null;
+      let headers = data.headers.slice();
+      let rows = data.rows.map(r => r.slice());
+      if (addSource) {
+        return {headers, rows};
+      }
+      const idxHash = headers.indexOf("hash");
+      if (idxHash !== -1) {
+        const outHeaders = ["hash"];
+        const outRows = rows.map(r => [r[idxHash]]);
+        return {headers:outHeaders, rows:outRows};
+      }
+      if (headers.length === 1) {
+        return {headers:["hash"], rows:rows.map(r => [r[0]])};
+      }
+      const nonEmptyMask = headers.map((_, colIdx) => {
+        for (let i = 0; i < rows.length; i++) {
+          const v = rows[i][colIdx];
+          if (v != null && String(v) !== "") return true;
+        }
+        return false;
+      });
+      const filteredHeaders = [];
+      const filteredRows = rows.map(r => []);
+      for (let colIdx = 0; colIdx < headers.length; colIdx++) {
+        if (!nonEmptyMask[colIdx]) continue;
+        filteredHeaders.push(headers[colIdx]);
+        filteredRows.forEach((rr, rowIndex) => {
+          rr.push(rows[rowIndex][colIdx]);
+        });
+      }
+      if (!filteredHeaders.length) {
+        return {headers:["hash"], rows:rows.map(() => [""])};
+      }
+      const outHeaders = ["hash"];
+      const firstIdx = 0;
+      const outRows = filteredRows.map(r => [r[firstIdx]]);
+      return {headers:outHeaders, rows:outRows};
+    }
+
+    function dropDuplicateRows(headers, rows) {
+      const seen = new Set();
+      const out = [];
+      for (const r of rows) {
+        const key = r.map(v => v == null ? "" : String(v)).join("||");
+        if (seen.has(key)) continue;
+        seen.add(key);
+        out.push(r);
+      }
+      return out;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const tabButtons = document.querySelectorAll(".tab-btn");
+      const tabPanels = document.querySelectorAll(".tab-panel");
+      tabButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const tab = btn.getAttribute("data-tab");
+          tabButtons.forEach(b => b.classList.remove("active"));
+          tabPanels.forEach(p => p.classList.remove("active"));
+          btn.classList.add("active");
+          const panel = document.getElementById("tab-" + tab);
+          if (panel) panel.classList.add("active");
+        });
+      });
+
+      // === STANDARD ===
+      const stdFileInput = document.getElementById("std-file");
+      const stdHashSelect = document.getElementById("std-hash");
+      const stdNormCheckbox = document.getElementById("std-norm");
+      const stdColSelect = document.getElementById("std-col");
+      const stdGoBtn = document.getElementById("std-go");
+      const stdStatus = document.getElementById("std-status");
+
+      stdFileInput.addEventListener("change", async () => {
+        stdStatus.className = "status info";
+        stdStatus.textContent = "Reading file...";
+        stdBlob = null;
+        document.getElementById("std-result").innerHTML = "";
+        document.getElementById("std-download-wrap").innerHTML = "";
+        const file = stdFileInput.files && stdFileInput.files[0];
+        stdData = null;
+        stdGoBtn.disabled = true;
+        stdColSelect.innerHTML = "";
+        document.getElementById("std-preview").innerHTML = "";
+        if (!file) {
+          stdStatus.textContent = "";
+          return;
+        }
+        try {
+          const data = await parseFile(file);
+          if (!data || !data.headers.length || !data.rows.length) {
+            stdStatus.className = "status error";
+            stdStatus.textContent = "Could not read the file or it is empty.";
+            return;
+          }
+          stdData = data;
+          stdColSelect.innerHTML = "";
+          data.headers.forEach(h => {
+            const opt = document.createElement("option");
+            opt.value = h;
+            opt.textContent = h;
+            stdColSelect.appendChild(opt);
+          });
+          stdGoBtn.disabled = false;
+          stdStatus.className = "status info";
+          stdStatus.textContent = `Previewing first 10 rows · shape: ${data.rows.length.toLocaleString()} × ${data.headers.length}`;
+          renderTable("std-preview", data.headers, data.rows, 10);
+        } catch (err) {
+          stdStatus.className = "status error";
+          stdStatus.textContent = "Error reading file.";
+        }
+      });
+
+      stdGoBtn.addEventListener("click", () => {
+        if (!stdData || !stdData.headers.length || !stdData.rows.length) return;
+        const colName = stdColSelect.value;
+        if (!colName) {
+          stdStatus.className = "status error";
+          stdStatus.textContent = "Select a column to hash.";
+          return;
+        }
+        const idx = stdData.headers.indexOf(colName);
+        if (idx === -1) {
+          stdStatus.className = "status error";
+          stdStatus.textContent = "Selected column not found.";
+          return;
+        }
+        const values = stdData.rows.map(r => r[idx]);
+        const normalizedSeries = seriesForHash(values, stdNormCheckbox.checked, colName);
+        const hashed = normalizedSeries.map(v => hashValue(v, stdHashSelect.value));
+        const unique = [];
+        const seen = new Set();
+        for (const h of hashed) {
+          if (seen.has(h)) continue;
+          seen.add(h);
+          unique.push(h);
+        }
+        const rows = unique.map(v => [v]);
+        renderTable("std-result", ["hash"], rows, 10);
+        const csv = toCsv(["hash"], rows);
+        stdBlob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+        const wrap = document.getElementById("std-download-wrap");
+        wrap.innerHTML = "";
+        const btn = document.createElement("button");
+        btn.className = "btn";
+        btn.textContent = "Download hashes (CSV)";
+        btn.addEventListener("click", () => {
+          if (!stdBlob) return;
+          const file = stdFileInput.files && stdFileInput.files[0];
+          const name = file ? baseName(file.name) + "_hashes.csv" : "hashes.csv";
+          saveAs(stdBlob, name);
+        });
+        wrap.appendChild(btn);
+        stdStatus.className = "status success";
+        stdStatus.textContent = `Generated ${rows.length.toLocaleString()} unique hashes.`;
+      });
+
+      // === ADVANCED ===
+      const advFilesInput = document.getElementById("adv-files");
+      const advStatus = document.getElementById("adv-status");
+      const advHashSelect = document.getElementById("adv-hash");
+      const advColsSelect = document.getElementById("adv-cols");
+      const advSuffixInput = document.getElementById("adv-suffix");
+      const advNormCheckbox = document.getElementById("adv-norm");
+      const advRenameOnCheckbox = document.getElementById("adv-rename-on");
+      const advRenameBlock = document.getElementById("adv-rename-block");
+      const advRenamesTextarea = document.getElementById("adv-renames");
+      const advPreviewBtn = document.getElementById("adv-preview-btn");
+      const advRunBtn = document.getElementById("adv-run-btn");
+      const advPreviewContainer = document.getElementById("adv-preview");
+      const advDownloads = document.getElementById("adv-downloads");
+      const advKeepGroup = document.getElementById("adv-keep-group");
+
+      let renamePreviewTimeout = null;
+
+      advRenameOnCheckbox.addEventListener("change", () => {
+        advRenameBlock.style.display = advRenameOnCheckbox.checked ? "block" : "none";
+        updateAdvPreview();
+      });
+
+      function getAdvKeepMode() {
+        const radios = document.querySelectorAll("input[name='adv-keep']");
+        for (const r of radios) {
+          if (r.checked) return r.value;
+        }
+        return "replace";
+      }
+
+      function getAdvOptions() {
+        const colsToHash = [];
+        for (const opt of advColsSelect.options) {
+          if (opt.selected) colsToHash.push(opt.value);
+        }
+        return {
+          hashType: advHashSelect.value,
+          colsToHash,
+          suffix: advSuffixInput.value,
+          normalize: advNormCheckbox.checked,
+          keepMode: getAdvKeepMode(),
+          renames: advRenameOnCheckbox.checked ? parseRenames(advRenamesTextarea.value) : {}
+        };
+      }
+
+      function updateAdvPreview() {
+        advPreviewContainer.innerHTML = "";
+        if (!advFilesData.length) {
+          advStatus.className = "status info";
+          advStatus.textContent = "Upload files to see preview.";
+          return;
+        }
+        const opts = getAdvOptions();
+        advStatus.className = "status info";
+        advStatus.textContent = "Building preview for each file (first 15 rows).";
+        advFilesData.forEach(data => {
+          const transformed = transformAdvancedFile(data, opts, false);
+          if (!transformed || !transformed.headers.length) return;
+          const card = document.createElement("div");
+          card.className = "card";
+          const titleRow = document.createElement("div");
+          titleRow.className = "card-title-row";
+          const h = document.createElement("h3");
+          h.style.margin = "0 0 .2rem 0";
+          h.style.fontSize = ".95rem";
+          h.textContent = data.name;
+          const shape = document.createElement("span");
+          shape.className = "pill";
+          shape.textContent = `preview shape: ${data.rows.length.toLocaleString()} × ${transformed.headers.length}`;
+          titleRow.appendChild(h);
+          titleRow.appendChild(shape);
+          card.appendChild(titleRow);
+          renderTable(card, transformed.headers, transformed.rows, 15);
+          advPreviewContainer.appendChild(card);
+        });
+        advStatus.className = "status success";
+        advStatus.textContent = "Preview updated.";
+      }
+
+      advFilesInput.addEventListener("change", async () => {
+        advStatus.className = "status info";
+        advStatus.textContent = "";
+        advFilesData = [];
+        advColsSelect.innerHTML = "";
+        advPreviewContainer.innerHTML = "";
+        advDownloads.innerHTML = "";
+        advOutputs = [];
+        advZipBlob = null;
+        const files = advFilesInput.files;
+        if (!files || !files.length) return;
+        advStatus.textContent = "Reading files...";
+        try {
+          const arr = [];
+          for (let i = 0; i < files.length; i++) {
+            const data = await parseFile(files[i]);
+            if (data && data.headers.length && data.rows.length) arr.push(data);
+          }
+          advFilesData = arr;
+          if (!advFilesData.length) {
+            advStatus.className = "status error";
+            advStatus.textContent = "No valid, non-empty files could be read.";
+            return;
+          }
+          const colSet = new Set();
+          advFilesData.forEach(d => d.headers.forEach(h => colSet.add(h)));
+          const cols = Array.from(colSet);
+          cols.sort((a,b) => a.localeCompare(b));
+          cols.forEach(c => {
+            const opt = document.createElement("option");
+            opt.value = c;
+            opt.textContent = c;
+            advColsSelect.appendChild(opt);
+          });
+          advStatus.className = "status info";
+          advStatus.textContent = `Loaded ${advFilesData.length} file(s). Preview reflects current options.`;
+          updateAdvPreview();
+        } catch (err) {
+          advStatus.className = "status error";
+          advStatus.textContent = "Error reading files.";
+        }
+      });
+
+      advHashSelect.addEventListener("change", updateAdvPreview);
+      advColsSelect.addEventListener("change", updateAdvPreview);
+      advSuffixInput.addEventListener("input", updateAdvPreview);
+      advNormCheckbox.addEventListener("change", updateAdvPreview);
+      advKeepGroup.addEventListener("change", updateAdvPreview);
+      advRenamesTextarea.addEventListener("input", () => {
+        if (!advRenameOnCheckbox.checked) return;
+        if (renamePreviewTimeout) clearTimeout(renamePreviewTimeout);
+        renamePreviewTimeout = setTimeout(() => {
+          updateAdvPreview();
+        }, 400);
+      });
+
+      advPreviewBtn.addEventListener("click", () => {
+        updateAdvPreview();
+      });
+
+      advRunBtn.addEventListener("click", async () => {
+        if (!advFilesData.length) {
+          advStatus.className = "status error";
+          advStatus.textContent = "Upload files first.";
+          return;
+        }
+        const opts = getAdvOptions();
+        advOutputs = [];
+        advZipBlob = null;
+        advDownloads.innerHTML = "";
+        showLoading("Hashing files...");
+        try {
+          const zip = new JSZip();
+          let valid = 0;
+          for (const data of advFilesData) {
+            const transformed = transformAdvancedFile(data, opts, true);
+            if (!transformed || !transformed.headers.length || !transformed.rows.length) continue;
+            const csv = toCsv(transformed.headers, transformed.rows);
+            const outName = baseName(data.name) + "_hashed.csv";
+            zip.file(outName, csv);
+            const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+            advOutputs.push({name:outName, blob});
+            valid += 1;
+          }
+          if (!advOutputs.length) {
+            advStatus.className = "status error";
+            advStatus.textContent = "No outputs produced. Check column names and options.";
+            hideLoading();
+            return;
+          }
+          const zipBlob = await zip.generateAsync({type:"blob"});
+          advZipBlob = zipBlob;
+          advDownloads.innerHTML = "";
+          advOutputs.forEach(o => {
+            const btn = document.createElement("button");
+            btn.className = "btn secondary btn-block";
+            btn.textContent = "Download " + o.name;
+            btn.addEventListener("click", () => {
+              saveAs(o.blob, o.name);
+            });
+            advDownloads.appendChild(btn);
+          });
+          const zipBtn = document.createElement("button");
+          zipBtn.className = "btn btn-block";
+          zipBtn.textContent = "Download all as ZIP";
+          zipBtn.addEventListener("click", () => {
+            if (!advZipBlob) return;
+            saveAs(advZipBlob, "hashed_outputs.zip");
+          });
+          advDownloads.appendChild(zipBtn);
+          advStatus.className = "status success";
+          advStatus.textContent = `Finished ${valid} file(s). Ready to download.`;
+        } catch (err) {
+          advStatus.className = "status error";
+          advStatus.textContent = "Error during hashing.";
+        } finally {
+          hideLoading();
+        }
+      });
+
+      // === COMBINE ===
+      const combineFilesInput = document.getElementById("combine-files");
+      const combineDropCheckbox = document.getElementById("combine-drop");
+      const combineSourceCheckbox = document.getElementById("combine-source");
+      const combineFormatSelect = document.getElementById("combine-format");
+      const combineNameInput = document.getElementById("combine-name");
+      const combineGoBtn = document.getElementById("combine-go");
+      const combineStatus = document.getElementById("combine-status");
+      const combineDownloadWrap = document.getElementById("combine-download-wrap");
+
+      combineFilesInput.addEventListener("change", async () => {
+        combineStatus.className = "status info";
+        combineStatus.textContent = "";
+        combineDownloadWrap.innerHTML = "";
+        combineFilesData = [];
+        const files = combineFilesInput.files;
+        if (!files || !files.length) return;
+        combineStatus.textContent = "Reading files...";
+        try {
+          const arr = [];
+          for (let i = 0; i < files.length; i++) {
+            const data = await parseFile(files[i]);
+            if (data && data.headers.length && data.rows.length) {
+              data._sourceName = files[i].name;
+              arr.push(data);
+            }
+          }
+          combineFilesData = arr;
+          if (!combineFilesData.length) {
+            combineStatus.className = "status error";
+            combineStatus.textContent = "No valid, non-empty files to combine.";
+            return;
+          }
+          combineStatus.className = "status info";
+          combineStatus.textContent = `Loaded ${combineFilesData.length} file(s). Ready to combine.`;
+        } catch (err) {
+          combineStatus.className = "status error";
+          combineStatus.textContent = "Error reading files.";
+        }
+      });
+
+      combineGoBtn.addEventListener("click", () => {
+        combineDownloadWrap.innerHTML = "";
+        if (!combineFilesData.length) {
+          combineStatus.className = "status error";
+          combineStatus.textContent = "Upload at least two files.";
+          return;
+        }
+        const addSource = combineSourceCheckbox.checked;
+        const dropDupes = combineDropCheckbox.checked;
+        const fmt = combineFormatSelect.value || "csv";
+        const nameRaw = combineNameInput.value && combineNameInput.value.trim()
+          ? combineNameInput.value.trim()
+          : "combined_output.csv";
+        const fileName = nameRaw.toLowerCase().endsWith(".csv") ? nameRaw : nameRaw + ".csv";
+
+        let frames = [];
+        for (const data of combineFilesData) {
+          const coerced = coerceToSingleHash(data, addSource);
+          if (!coerced || !coerced.headers.length || !coerced.rows.length) continue;
+          let headers = coerced.headers.slice();
+          let rows = coerced.rows.map(r => r.slice());
+          if (addSource) {
+            if (!headers.includes("source_filename")) {
+              headers = ["source_filename"].concat(headers);
+              rows = rows.map(r => [data._sourceName || data.name].concat(r));
+            }
+          }
+          frames.push({headers, rows});
+        }
+        if (!frames.length) {
+          combineStatus.className = "status error";
+          combineStatus.textContent = "No valid, non-empty files to combine.";
+          return;
+        }
+        const baseHeaders = frames[0].headers.slice();
+        let allRows = [];
+        frames.forEach(f => {
+          if (JSON.stringify(f.headers) === JSON.stringify(baseHeaders)) {
+            allRows = allRows.concat(f.rows);
+          } else {
+            const indexMap = {};
+            baseHeaders.forEach((h, idx) => {
+              indexMap[h] = idx;
+            });
+            f.rows.forEach(row => {
+              const newRow = new Array(baseHeaders.length).fill("");
+              f.headers.forEach((h, idx) => {
+                const targetIdx = indexMap[h];
+                if (targetIdx != null) newRow[targetIdx] = row[idx];
+              });
+              allRows.push(newRow);
+            });
+          }
+        });
+        if (dropDupes) {
+          allRows = dropDuplicateRows(baseHeaders, allRows);
+        }
+        if (fmt === "csv") {
+          const csv = toCsv(baseHeaders, allRows);
+          const blob = new Blob([csv], {type:"text/csv;charset=utf-8;"});
+          const btn = document.createElement("button");
+          btn.className = "btn";
+          btn.textContent = "Download " + fileName;
+          btn.addEventListener("click", () => {
+            saveAs(blob, fileName);
+          });
+          combineDownloadWrap.appendChild(btn);
+          combineStatus.className = "status success";
+          combineStatus.textContent = `Combined ${frames.length} file(s). Output rows: ${allRows.length.toLocaleString()}.`;
+        } else {
+          combineStatus.className = "status error";
+          combineStatus.textContent = "Only CSV output is supported in the browser version.";
+        }
+      });
+    });
+  </script>
+</body>
+</html>
